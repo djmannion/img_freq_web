@@ -6,16 +6,16 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
     "serve": "beefy img_freq_web.js:img_freq_web_browser.js --index index.html",
-    "build": "browserify img_freq_web.js -o img_freq_web_browser.js"
+    "build": "browserify img_freq_web.js --standalone djm -o img_freq_web_browser.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "baboon-image": "^2.1.0",
     "beefy": "^2.1.8",
     "browserify": "^17.0.0",
     "cwise": "^1.0.10",
+    "luminance": "^1.0.3",
     "ndarray": "^1.0.19",
     "ndarray-complex": "^1.0.3",
     "ndarray-fft": "^1.0.3",
