@@ -4,7 +4,9 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "serve": "beefy img_freq_web.js:img_freq_web_browser.js --index index.html",
+    "build": "browserify img_freq_web.js -o img_freq_web_browser.js"
   },
   "keywords": [],
   "author": "",
