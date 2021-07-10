@@ -9,7 +9,6 @@ const SCI = {
     scratch: require("ndarray-scratch"),
     fft: require("ndarray-fft"),
     cops: require("ndarray-complex"),
-    translate: require("ndarray-translate-fft"),
 };
 
 async function main() {
@@ -44,13 +43,15 @@ async function main() {
 
         SCI.cops.abs(absFreq, realArray, imagArray);
 
-        // take the logarithm
-        SCI.ops.logeq(absFreq);
+        absFreq = fftshift(absFreq);
 
-        // get the maximum for normalisation purposes
-        let max = SCI.ops.sup(absFreq);
+        // normalise to [0, 1]
+        normalise(absFreq);
 
-        SCI.translate.wrap(absFreq, [imgSize / 2, imgSize / 2]);
+        // convert to 'lightness'
+        linearToLightness(absFreq);
+        // convert to sRGB
+        linearTosRGB(absFreq);
 
         let absFreqImage = new ImageData(imgSize, imgSize);
 
@@ -58,7 +59,7 @@ async function main() {
 
         for (let iRow = 0; iRow < imgSize; iRow++) {
             for (let iCol = 0; iCol < imgSize; iCol++) {
-                let imgVal = absFreq.get(iRow, iCol) / max * 255;
+                let imgVal = absFreq.get(iRow, iCol) * 255;
                 for (let iRGB = 0; iRGB < 3; iRGB++) {
                     absFreqImage.data[iFlat] = imgVal;
                     iFlat++;
@@ -162,6 +163,108 @@ function calcMean(array) {
 }
 
 
+function fftshift(array) {
+
+    let outArray = SCI.zeros(array.shape);
+
+    const imgSize = array.shape[0];
+
+    const halfSize = imgSize / 2;
+
+    for (let iSrcRow = 0; iSrcRow < imgSize; iSrcRow++) {
+        for (let iSrcCol = 0; iSrcCol < imgSize; iSrcCol++) {
+
+            let iDstRow, iDstCol;
+
+            if (iSrcRow < halfSize) {
+                iDstRow = halfSize + iSrcRow;
+            }
+            else {
+                iDstRow = iSrcRow - halfSize;
+            }
+
+            if (iSrcCol < halfSize) {
+                iDstCol = halfSize + iSrcCol;
+            }
+            else {
+                iDstCol = iSrcCol - halfSize;
+            }
+
+            outArray.set(iDstRow, iDstCol, array.get(iSrcRow, iSrcCol));
+
+        }
+    }
+
+    return outArray;
+}
+
+
+function normalise(array, oldMin, oldMax, newMin = 0, newMax = 1) {
+
+    oldMin = oldMin ?? SCI.ops.inf(array);
+    oldMax = oldMax ?? SCI.ops.sup(array);
+
+    const _convert = SCI.cwise(
+        {
+            args: ["array", "scalar", "scalar", "scalar", "scalar"],
+            body: function (o, oldMin, oldMax, newMin, newMax) {
+                o = (
+                    (
+                        (o - oldMin) * (newMax - newMin)
+                    ) / (oldMax - oldMin)
+                ) + newMin;
+            },
+        },
+    );
+
+    _convert(array, oldMin, oldMax, newMin, newMax);
+
+}
+
+
+function clip(array, min, max) {
+
+    const _clip = SCI.cwise(
+        {
+            args: ["array", "scalar", "scalar"],
+            body: function (o, clipMin, clipMax) {
+                if (o < clipMin) {
+                    o = clipMin;
+                }
+                else if (o > clipMax) {
+                    o = clipMax;
+                }
+            }
+        },
+    );
+
+    _clip(array, min, max);
+
+}
+
+
+function linearToLightness(img) {
+    // 'lightness' not really
+
+    const _linearToLightness = SCI.cwise(
+        {
+            args: ["array"],
+            body: function (o) {
+                if (o <= 0.008856) {
+                    o *= 903.3;
+                }
+                else {
+                    o = Math.pow(o, 1 / 3) * 116 - 16;
+                }
+                o /= 100.0;
+            },
+        },
+    );
+
+    _linearToLightness(img);
+}
+
+
 function linearRGBtoLuminance(img) {
 
     // output array to fill
@@ -230,7 +333,7 @@ module.exports = [main, sRGBtoLinear, linearTosRGB];
 
 window.addEventListener("load", main);
 
-},{"cwise":9,"ndarray":22,"ndarray-complex":16,"ndarray-fft":17,"ndarray-ops":19,"ndarray-scratch":20,"ndarray-translate-fft":21,"zeros":26}],2:[function(require,module,exports){
+},{"cwise":9,"ndarray":21,"ndarray-complex":16,"ndarray-fft":17,"ndarray-ops":19,"ndarray-scratch":20,"zeros":24}],2:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -2840,7 +2943,7 @@ function generateCWiseOp(proc, typesig) {
 }
 module.exports = generateCWiseOp
 
-},{"uniq":25}],7:[function(require,module,exports){
+},{"uniq":23}],7:[function(require,module,exports){
 "use strict"
 
 // The function below is called when constructing a cwise function object, and does the following:
@@ -3126,7 +3229,7 @@ function preprocess(func) {
 
 module.exports = preprocess
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"esprima":12,"uniq":25}],9:[function(require,module,exports){
+},{"esprima":12,"uniq":23}],9:[function(require,module,exports){
 "use strict"
 
 var parse   = require("cwise-parser")
@@ -7188,33 +7291,33 @@ function conjeq(out_r, out_i) {
 }
 exports.conjeq = conjeq
 
-exports.mul = require('cwise/lib/wrapper')({"args":["array","array","array","array","array","array"],"pre":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"body":{"body":"{var _inline_4_i=_inline_4_arg2_,_inline_4_o=_inline_4_arg3_,_inline_4_t=_inline_4_arg4_,_inline_4_u=_inline_4_arg5_,_inline_4_X=_inline_4_t*(_inline_4_i+_inline_4_o);_inline_4_arg0_=_inline_4_X-_inline_4_o*(_inline_4_t+_inline_4_u),_inline_4_arg1_=_inline_4_X+_inline_4_i*(_inline_4_u-_inline_4_t)}","args":[{"name":"_inline_4_arg0_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_4_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_4_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_4_arg3_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_4_arg4_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_4_arg5_","lvalue":false,"rvalue":true,"count":1}],"thisVars":[],"localVars":["_inline_4_X","_inline_4_i","_inline_4_o","_inline_4_t","_inline_4_u"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cmul","blockSize":64})
+exports.mul = require('cwise/lib/wrapper')({"args":["array","array","array","array","array","array"],"pre":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"body":{"body":"{var _inline_1_i=_inline_1_arg2_,_inline_1_o=_inline_1_arg3_,_inline_1_t=_inline_1_arg4_,_inline_1_u=_inline_1_arg5_,_inline_1_X=_inline_1_t*(_inline_1_i+_inline_1_o);_inline_1_arg0_=_inline_1_X-_inline_1_o*(_inline_1_t+_inline_1_u),_inline_1_arg1_=_inline_1_X+_inline_1_i*(_inline_1_u-_inline_1_t)}","args":[{"name":"_inline_1_arg0_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_1_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_1_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_1_arg3_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_1_arg4_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_1_arg5_","lvalue":false,"rvalue":true,"count":1}],"thisVars":[],"localVars":["_inline_1_X","_inline_1_i","_inline_1_o","_inline_1_t","_inline_1_u"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cmul","blockSize":64})
 
-exports.muleq = require('cwise/lib/wrapper')({"args":["array","array","array","array"],"pre":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"body":{"body":"{var _inline_7_c=_inline_7_arg2_,_inline_7_f=_inline_7_arg3_,_inline_7_i=_inline_7_arg0_,_inline_7_o=_inline_7_arg1_,_inline_7_t=_inline_7_i*(_inline_7_c+_inline_7_f);_inline_7_arg0_=_inline_7_t-_inline_7_f*(_inline_7_i+_inline_7_o),_inline_7_arg1_=_inline_7_t+_inline_7_c*(_inline_7_o-_inline_7_i)}","args":[{"name":"_inline_7_arg0_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_7_arg1_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_7_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_7_arg3_","lvalue":false,"rvalue":true,"count":1}],"thisVars":[],"localVars":["_inline_7_c","_inline_7_f","_inline_7_i","_inline_7_o","_inline_7_t"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cmuleq","blockSize":64})
+exports.muleq = require('cwise/lib/wrapper')({"args":["array","array","array","array"],"pre":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"body":{"body":"{var _inline_4_c=_inline_4_arg2_,_inline_4_f=_inline_4_arg3_,_inline_4_i=_inline_4_arg0_,_inline_4_o=_inline_4_arg1_,_inline_4_t=_inline_4_i*(_inline_4_c+_inline_4_f);_inline_4_arg0_=_inline_4_t-_inline_4_f*(_inline_4_i+_inline_4_o),_inline_4_arg1_=_inline_4_t+_inline_4_c*(_inline_4_o-_inline_4_i)}","args":[{"name":"_inline_4_arg0_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_4_arg1_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_4_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_4_arg3_","lvalue":false,"rvalue":true,"count":1}],"thisVars":[],"localVars":["_inline_4_c","_inline_4_f","_inline_4_i","_inline_4_o","_inline_4_t"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cmuleq","blockSize":64})
 
-exports.muls = require('cwise/lib/wrapper')({"args":["array","array","array","array","scalar","scalar"],"pre":{"body":"{this_u=_inline_9_arg4_+_inline_9_arg5_,this_v=_inline_9_arg5_-_inline_9_arg4_}","args":[{"name":"_inline_9_arg0_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_9_arg1_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_9_arg2_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_9_arg3_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_9_arg4_","lvalue":false,"rvalue":true,"count":2},{"name":"_inline_9_arg5_","lvalue":false,"rvalue":true,"count":2}],"thisVars":["this_u","this_v"],"localVars":[]},"body":{"body":"{var _inline_10_r=_inline_10_arg2_,_inline_10_s=_inline_10_arg3_,_inline_10_u=_inline_10_arg4_*(_inline_10_r+_inline_10_s);_inline_10_arg0_=_inline_10_u-_inline_10_s*this_u,_inline_10_arg1_=_inline_10_u+_inline_10_r*this_v}","args":[{"name":"_inline_10_arg0_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_10_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_10_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_10_arg3_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_10_arg4_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_10_arg5_","lvalue":false,"rvalue":false,"count":0}],"thisVars":["this_u","this_v"],"localVars":["_inline_10_r","_inline_10_s","_inline_10_u"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cmuls","blockSize":64})
+exports.muls = require('cwise/lib/wrapper')({"args":["array","array","array","array","scalar","scalar"],"pre":{"body":"{this_u=_inline_6_arg4_+_inline_6_arg5_,this_v=_inline_6_arg5_-_inline_6_arg4_}","args":[{"name":"_inline_6_arg0_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_6_arg1_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_6_arg2_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_6_arg3_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_6_arg4_","lvalue":false,"rvalue":true,"count":2},{"name":"_inline_6_arg5_","lvalue":false,"rvalue":true,"count":2}],"thisVars":["this_u","this_v"],"localVars":[]},"body":{"body":"{var _inline_7_r=_inline_7_arg2_,_inline_7_s=_inline_7_arg3_,_inline_7_u=_inline_7_arg4_*(_inline_7_r+_inline_7_s);_inline_7_arg0_=_inline_7_u-_inline_7_s*this_u,_inline_7_arg1_=_inline_7_u+_inline_7_r*this_v}","args":[{"name":"_inline_7_arg0_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_7_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_7_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_7_arg3_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_7_arg4_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_7_arg5_","lvalue":false,"rvalue":false,"count":0}],"thisVars":["this_u","this_v"],"localVars":["_inline_7_r","_inline_7_s","_inline_7_u"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cmuls","blockSize":64})
 
-exports.mulseq = require('cwise/lib/wrapper')({"args":["array","array","scalar","scalar"],"pre":{"body":"{this_u=_inline_12_arg2_+_inline_12_arg3_,this_v=_inline_12_arg3_-_inline_12_arg2_}","args":[{"name":"_inline_12_arg0_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_12_arg1_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_12_arg2_","lvalue":false,"rvalue":true,"count":2},{"name":"_inline_12_arg3_","lvalue":false,"rvalue":true,"count":2}],"thisVars":["this_u","this_v"],"localVars":[]},"body":{"body":"{var _inline_13_h=_inline_13_arg0_,_inline_13_n=_inline_13_arg1_,_inline_13_r=_inline_13_arg2_*(_inline_13_h+_inline_13_n);_inline_13_arg0_=_inline_13_r-_inline_13_n*this_u,_inline_13_arg1_=_inline_13_r+_inline_13_h*this_v}","args":[{"name":"_inline_13_arg0_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_13_arg1_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_13_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_13_arg3_","lvalue":false,"rvalue":false,"count":0}],"thisVars":["this_u","this_v"],"localVars":["_inline_13_h","_inline_13_n","_inline_13_r"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cmulseq","blockSize":64})
+exports.mulseq = require('cwise/lib/wrapper')({"args":["array","array","scalar","scalar"],"pre":{"body":"{this_u=_inline_9_arg2_+_inline_9_arg3_,this_v=_inline_9_arg3_-_inline_9_arg2_}","args":[{"name":"_inline_9_arg0_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_9_arg1_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_9_arg2_","lvalue":false,"rvalue":true,"count":2},{"name":"_inline_9_arg3_","lvalue":false,"rvalue":true,"count":2}],"thisVars":["this_u","this_v"],"localVars":[]},"body":{"body":"{var _inline_10_h=_inline_10_arg0_,_inline_10_n=_inline_10_arg1_,_inline_10_r=_inline_10_arg2_*(_inline_10_h+_inline_10_n);_inline_10_arg0_=_inline_10_r-_inline_10_n*this_u,_inline_10_arg1_=_inline_10_r+_inline_10_h*this_v}","args":[{"name":"_inline_10_arg0_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_10_arg1_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_10_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_10_arg3_","lvalue":false,"rvalue":false,"count":0}],"thisVars":["this_u","this_v"],"localVars":["_inline_10_h","_inline_10_n","_inline_10_r"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cmulseq","blockSize":64})
 
-exports.div = require('cwise/lib/wrapper')({"args":["array","array","array","array","array","array"],"pre":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"body":{"body":"{var _inline_16_s,_inline_16_v,_inline_16_M=_inline_16_arg2_,_inline_16_c=_inline_16_arg3_,_inline_16_f=_inline_16_arg4_,_inline_16_i=_inline_16_arg5_;Math.abs(_inline_16_f)>=Math.abs(_inline_16_i)?(_inline_16_s=_inline_16_i/_inline_16_f,_inline_16_v=_inline_16_f+_inline_16_i*_inline_16_s,_inline_16_arg0_=(_inline_16_M+_inline_16_c*_inline_16_s)/_inline_16_v,_inline_16_arg1_=(_inline_16_c-_inline_16_M*_inline_16_s)/_inline_16_v):(_inline_16_s=_inline_16_f/_inline_16_i,_inline_16_v=_inline_16_f*_inline_16_s+_inline_16_i,_inline_16_arg0_=(_inline_16_M*_inline_16_s+_inline_16_c)/_inline_16_v,_inline_16_arg1_=(_inline_16_c*_inline_16_s-_inline_16_M)/_inline_16_v)}","args":[{"name":"_inline_16_arg0_","lvalue":true,"rvalue":false,"count":2},{"name":"_inline_16_arg1_","lvalue":true,"rvalue":false,"count":2},{"name":"_inline_16_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_16_arg3_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_16_arg4_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_16_arg5_","lvalue":false,"rvalue":true,"count":1}],"thisVars":[],"localVars":["_inline_16_M","_inline_16_c","_inline_16_f","_inline_16_i","_inline_16_s","_inline_16_v"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cdiv","blockSize":64})
+exports.div = require('cwise/lib/wrapper')({"args":["array","array","array","array","array","array"],"pre":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"body":{"body":"{var _inline_13_s,_inline_13_v,_inline_13_M=_inline_13_arg2_,_inline_13_c=_inline_13_arg3_,_inline_13_f=_inline_13_arg4_,_inline_13_i=_inline_13_arg5_;Math.abs(_inline_13_f)>=Math.abs(_inline_13_i)?(_inline_13_s=_inline_13_i/_inline_13_f,_inline_13_v=_inline_13_f+_inline_13_i*_inline_13_s,_inline_13_arg0_=(_inline_13_M+_inline_13_c*_inline_13_s)/_inline_13_v,_inline_13_arg1_=(_inline_13_c-_inline_13_M*_inline_13_s)/_inline_13_v):(_inline_13_s=_inline_13_f/_inline_13_i,_inline_13_v=_inline_13_f*_inline_13_s+_inline_13_i,_inline_13_arg0_=(_inline_13_M*_inline_13_s+_inline_13_c)/_inline_13_v,_inline_13_arg1_=(_inline_13_c*_inline_13_s-_inline_13_M)/_inline_13_v)}","args":[{"name":"_inline_13_arg0_","lvalue":true,"rvalue":false,"count":2},{"name":"_inline_13_arg1_","lvalue":true,"rvalue":false,"count":2},{"name":"_inline_13_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_13_arg3_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_13_arg4_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_13_arg5_","lvalue":false,"rvalue":true,"count":1}],"thisVars":[],"localVars":["_inline_13_M","_inline_13_c","_inline_13_f","_inline_13_i","_inline_13_s","_inline_13_v"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cdiv","blockSize":64})
 
-exports.diveq = require('cwise/lib/wrapper')({"args":["array","array","array","array"],"pre":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"body":{"body":"{var _inline_19_n,_inline_19_r,_inline_19_s=_inline_19_arg0_,_inline_19_v=_inline_19_arg1_,_inline_19_M=_inline_19_arg2_,_inline_19_c=_inline_19_arg3_;Math.abs(_inline_19_M)>=Math.abs(_inline_19_c)?(_inline_19_n=_inline_19_c/_inline_19_M,_inline_19_r=_inline_19_M+_inline_19_c*_inline_19_n,_inline_19_arg0_=(_inline_19_s+_inline_19_v*_inline_19_n)/_inline_19_r,_inline_19_arg1_=(_inline_19_v-_inline_19_s*_inline_19_n)/_inline_19_r):(_inline_19_n=_inline_19_M/_inline_19_c,_inline_19_r=_inline_19_M*_inline_19_n+_inline_19_c,_inline_19_arg0_=(_inline_19_s*_inline_19_n+_inline_19_v)/_inline_19_r,_inline_19_arg1_=(_inline_19_v*_inline_19_n-_inline_19_s)/_inline_19_r)}","args":[{"name":"_inline_19_arg0_","lvalue":true,"rvalue":true,"count":3},{"name":"_inline_19_arg1_","lvalue":true,"rvalue":true,"count":3},{"name":"_inline_19_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_19_arg3_","lvalue":false,"rvalue":true,"count":1}],"thisVars":[],"localVars":["_inline_19_M","_inline_19_c","_inline_19_n","_inline_19_r","_inline_19_s","_inline_19_v"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cdiveq","blockSize":64})
+exports.diveq = require('cwise/lib/wrapper')({"args":["array","array","array","array"],"pre":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"body":{"body":"{var _inline_16_n,_inline_16_r,_inline_16_s=_inline_16_arg0_,_inline_16_v=_inline_16_arg1_,_inline_16_M=_inline_16_arg2_,_inline_16_c=_inline_16_arg3_;Math.abs(_inline_16_M)>=Math.abs(_inline_16_c)?(_inline_16_n=_inline_16_c/_inline_16_M,_inline_16_r=_inline_16_M+_inline_16_c*_inline_16_n,_inline_16_arg0_=(_inline_16_s+_inline_16_v*_inline_16_n)/_inline_16_r,_inline_16_arg1_=(_inline_16_v-_inline_16_s*_inline_16_n)/_inline_16_r):(_inline_16_n=_inline_16_M/_inline_16_c,_inline_16_r=_inline_16_M*_inline_16_n+_inline_16_c,_inline_16_arg0_=(_inline_16_s*_inline_16_n+_inline_16_v)/_inline_16_r,_inline_16_arg1_=(_inline_16_v*_inline_16_n-_inline_16_s)/_inline_16_r)}","args":[{"name":"_inline_16_arg0_","lvalue":true,"rvalue":true,"count":3},{"name":"_inline_16_arg1_","lvalue":true,"rvalue":true,"count":3},{"name":"_inline_16_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_16_arg3_","lvalue":false,"rvalue":true,"count":1}],"thisVars":[],"localVars":["_inline_16_M","_inline_16_c","_inline_16_n","_inline_16_r","_inline_16_s","_inline_16_v"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cdiveq","blockSize":64})
 
-exports.divs = require('cwise/lib/wrapper')({"args":["array","array","array","array","scalar","scalar"],"pre":{"body":"{var _inline_21_c=_inline_21_arg4_*_inline_21_arg4_+_inline_21_arg5_*_inline_21_arg5_;_inline_21_arg4_/=_inline_21_c,_inline_21_arg5_/=-_inline_21_c,this_c=_inline_21_arg4_,this_u=_inline_21_arg4_+_inline_21_arg5_,this_v=_inline_21_arg5_-_inline_21_arg4_}","args":[{"name":"_inline_21_arg0_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_21_arg1_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_21_arg2_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_21_arg3_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_21_arg4_","lvalue":true,"rvalue":true,"count":6},{"name":"_inline_21_arg5_","lvalue":true,"rvalue":true,"count":5}],"thisVars":["this_c","this_u","this_v"],"localVars":["_inline_21_c"]},"body":{"body":"{var _inline_22_c=_inline_22_arg2_,_inline_22_n=_inline_22_arg3_,_inline_22_r=this_c*(_inline_22_c+_inline_22_n);_inline_22_arg0_=_inline_22_r-_inline_22_n*this_u,_inline_22_arg1_=_inline_22_r+_inline_22_c*this_v}","args":[{"name":"_inline_22_arg0_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_22_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_22_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_22_arg3_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_22_arg4_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_22_arg5_","lvalue":false,"rvalue":false,"count":0}],"thisVars":["this_c","this_u","this_v"],"localVars":["_inline_22_c","_inline_22_n","_inline_22_r"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cdivs","blockSize":64})
+exports.divs = require('cwise/lib/wrapper')({"args":["array","array","array","array","scalar","scalar"],"pre":{"body":"{var _inline_18_c=_inline_18_arg4_*_inline_18_arg4_+_inline_18_arg5_*_inline_18_arg5_;_inline_18_arg4_/=_inline_18_c,_inline_18_arg5_/=-_inline_18_c,this_c=_inline_18_arg4_,this_u=_inline_18_arg4_+_inline_18_arg5_,this_v=_inline_18_arg5_-_inline_18_arg4_}","args":[{"name":"_inline_18_arg0_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_18_arg1_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_18_arg2_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_18_arg3_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_18_arg4_","lvalue":true,"rvalue":true,"count":6},{"name":"_inline_18_arg5_","lvalue":true,"rvalue":true,"count":5}],"thisVars":["this_c","this_u","this_v"],"localVars":["_inline_18_c"]},"body":{"body":"{var _inline_19_c=_inline_19_arg2_,_inline_19_n=_inline_19_arg3_,_inline_19_r=this_c*(_inline_19_c+_inline_19_n);_inline_19_arg0_=_inline_19_r-_inline_19_n*this_u,_inline_19_arg1_=_inline_19_r+_inline_19_c*this_v}","args":[{"name":"_inline_19_arg0_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_19_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_19_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_19_arg3_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_19_arg4_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_19_arg5_","lvalue":false,"rvalue":false,"count":0}],"thisVars":["this_c","this_u","this_v"],"localVars":["_inline_19_c","_inline_19_n","_inline_19_r"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cdivs","blockSize":64})
 
-exports.divseq = require('cwise/lib/wrapper')({"args":["array","array","scalar","scalar"],"pre":{"body":"{var _inline_24_v=_inline_24_arg2_*_inline_24_arg2_+_inline_24_arg3_*_inline_24_arg3_;_inline_24_arg2_/=_inline_24_v,_inline_24_arg3_/=-_inline_24_v,this_c=_inline_24_arg2_,this_u=_inline_24_arg2_+_inline_24_arg3_,this_v=_inline_24_arg3_-_inline_24_arg2_}","args":[{"name":"_inline_24_arg0_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_24_arg1_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_24_arg2_","lvalue":true,"rvalue":true,"count":6},{"name":"_inline_24_arg3_","lvalue":true,"rvalue":true,"count":5}],"thisVars":["this_c","this_u","this_v"],"localVars":["_inline_24_v"]},"body":{"body":"{var _inline_25_v=_inline_25_arg0_,_inline_25_a=_inline_25_arg1_,_inline_25_c=this_c*(_inline_25_v+_inline_25_a);_inline_25_arg0_=_inline_25_c-_inline_25_a*this_u,_inline_25_arg1_=_inline_25_c+_inline_25_v*this_v}","args":[{"name":"_inline_25_arg0_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_25_arg1_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_25_arg2_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_25_arg3_","lvalue":false,"rvalue":false,"count":0}],"thisVars":["this_c","this_u","this_v"],"localVars":["_inline_25_a","_inline_25_c","_inline_25_v"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cdivseq","blockSize":64})
+exports.divseq = require('cwise/lib/wrapper')({"args":["array","array","scalar","scalar"],"pre":{"body":"{var _inline_21_v=_inline_21_arg2_*_inline_21_arg2_+_inline_21_arg3_*_inline_21_arg3_;_inline_21_arg2_/=_inline_21_v,_inline_21_arg3_/=-_inline_21_v,this_c=_inline_21_arg2_,this_u=_inline_21_arg2_+_inline_21_arg3_,this_v=_inline_21_arg3_-_inline_21_arg2_}","args":[{"name":"_inline_21_arg0_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_21_arg1_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_21_arg2_","lvalue":true,"rvalue":true,"count":6},{"name":"_inline_21_arg3_","lvalue":true,"rvalue":true,"count":5}],"thisVars":["this_c","this_u","this_v"],"localVars":["_inline_21_v"]},"body":{"body":"{var _inline_22_v=_inline_22_arg0_,_inline_22_a=_inline_22_arg1_,_inline_22_c=this_c*(_inline_22_v+_inline_22_a);_inline_22_arg0_=_inline_22_c-_inline_22_a*this_u,_inline_22_arg1_=_inline_22_c+_inline_22_v*this_v}","args":[{"name":"_inline_22_arg0_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_22_arg1_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_22_arg2_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_22_arg3_","lvalue":false,"rvalue":false,"count":0}],"thisVars":["this_c","this_u","this_v"],"localVars":["_inline_22_a","_inline_22_c","_inline_22_v"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cdivseq","blockSize":64})
 
-exports.recip = require('cwise/lib/wrapper')({"args":["array","array","array","array"],"pre":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"body":{"body":"{var _inline_28_c=_inline_28_arg2_,_inline_28_f=_inline_28_arg3_,_inline_28_i=_inline_28_c*_inline_28_c+_inline_28_f*_inline_28_f;_inline_28_arg0_=_inline_28_c/_inline_28_i,_inline_28_arg1_=-_inline_28_f/_inline_28_i}","args":[{"name":"_inline_28_arg0_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_28_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_28_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_28_arg3_","lvalue":false,"rvalue":true,"count":1}],"thisVars":[],"localVars":["_inline_28_c","_inline_28_f","_inline_28_i"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"crecip","blockSize":64})
+exports.recip = require('cwise/lib/wrapper')({"args":["array","array","array","array"],"pre":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"body":{"body":"{var _inline_25_c=_inline_25_arg2_,_inline_25_f=_inline_25_arg3_,_inline_25_i=_inline_25_c*_inline_25_c+_inline_25_f*_inline_25_f;_inline_25_arg0_=_inline_25_c/_inline_25_i,_inline_25_arg1_=-_inline_25_f/_inline_25_i}","args":[{"name":"_inline_25_arg0_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_25_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_25_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_25_arg3_","lvalue":false,"rvalue":true,"count":1}],"thisVars":[],"localVars":["_inline_25_c","_inline_25_f","_inline_25_i"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"crecip","blockSize":64})
 
-exports.recipeq = require('cwise/lib/wrapper')({"args":["array","array"],"pre":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"body":{"body":"{var _inline_31_r=_inline_31_arg0_,_inline_31_v=_inline_31_arg1_,_inline_31_c=_inline_31_r*_inline_31_r+_inline_31_v*_inline_31_v;_inline_31_arg0_=_inline_31_r/_inline_31_c,_inline_31_arg1_=-_inline_31_v/_inline_31_c}","args":[{"name":"_inline_31_arg0_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_31_arg1_","lvalue":true,"rvalue":true,"count":2}],"thisVars":[],"localVars":["_inline_31_c","_inline_31_r","_inline_31_v"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"crecipeq","blockSize":64})
+exports.recipeq = require('cwise/lib/wrapper')({"args":["array","array"],"pre":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"body":{"body":"{var _inline_28_r=_inline_28_arg0_,_inline_28_v=_inline_28_arg1_,_inline_28_c=_inline_28_r*_inline_28_r+_inline_28_v*_inline_28_v;_inline_28_arg0_=_inline_28_r/_inline_28_c,_inline_28_arg1_=-_inline_28_v/_inline_28_c}","args":[{"name":"_inline_28_arg0_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_28_arg1_","lvalue":true,"rvalue":true,"count":2}],"thisVars":[],"localVars":["_inline_28_c","_inline_28_r","_inline_28_v"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"crecipeq","blockSize":64})
 
-exports.exp = require('cwise/lib/wrapper')({"args":["array","array","array","array"],"pre":{"body":"{this_exp=Math.exp,this_cos=Math.cos,this_sin=Math.sin}","args":[],"thisVars":["this_cos","this_exp","this_sin"],"localVars":[]},"body":{"body":"{var _inline_34_n=this_exp(_inline_34_arg2_);_inline_34_arg0_=_inline_34_n*this_cos(_inline_34_arg3_),_inline_34_arg1_=_inline_34_n*this_sin(_inline_34_arg3_)}","args":[{"name":"_inline_34_arg0_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_34_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_34_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_34_arg3_","lvalue":false,"rvalue":true,"count":2}],"thisVars":["this_cos","this_exp","this_sin"],"localVars":["_inline_34_n"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cexp","blockSize":64})
+exports.exp = require('cwise/lib/wrapper')({"args":["array","array","array","array"],"pre":{"body":"{this_exp=Math.exp,this_cos=Math.cos,this_sin=Math.sin}","args":[],"thisVars":["this_cos","this_exp","this_sin"],"localVars":[]},"body":{"body":"{var _inline_31_n=this_exp(_inline_31_arg2_);_inline_31_arg0_=_inline_31_n*this_cos(_inline_31_arg3_),_inline_31_arg1_=_inline_31_n*this_sin(_inline_31_arg3_)}","args":[{"name":"_inline_31_arg0_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_31_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_31_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_31_arg3_","lvalue":false,"rvalue":true,"count":2}],"thisVars":["this_cos","this_exp","this_sin"],"localVars":["_inline_31_n"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cexp","blockSize":64})
 
-exports.expeq = require('cwise/lib/wrapper')({"args":["array","array"],"pre":{"body":"{this_exp=Math.exp,this_cos=Math.cos,this_sin=Math.sin}","args":[],"thisVars":["this_cos","this_exp","this_sin"],"localVars":[]},"body":{"body":"{var _inline_37_t=this_exp(_inline_37_arg0_),_inline_37_h=_inline_37_out__ir;_inline_37_arg0_=_inline_37_t*this_cos(_inline_37_h),_inline_37_arg1_=_inline_37_t*this_sin(_inline_37_h)}","args":[{"name":"_inline_37_arg0_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_37_arg1_","lvalue":true,"rvalue":false,"count":1}],"thisVars":["this_cos","this_exp","this_sin"],"localVars":["_inline_37_h","_inline_37_out__ir","_inline_37_t"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cexpeq","blockSize":64})
+exports.expeq = require('cwise/lib/wrapper')({"args":["array","array"],"pre":{"body":"{this_exp=Math.exp,this_cos=Math.cos,this_sin=Math.sin}","args":[],"thisVars":["this_cos","this_exp","this_sin"],"localVars":[]},"body":{"body":"{var _inline_34_t=this_exp(_inline_34_arg0_),_inline_34_h=_inline_34_out__ir;_inline_34_arg0_=_inline_34_t*this_cos(_inline_34_h),_inline_34_arg1_=_inline_34_t*this_sin(_inline_34_h)}","args":[{"name":"_inline_34_arg0_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_34_arg1_","lvalue":true,"rvalue":false,"count":1}],"thisVars":["this_cos","this_exp","this_sin"],"localVars":["_inline_34_h","_inline_34_out__ir","_inline_34_t"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cexpeq","blockSize":64})
 
-exports.mag = require('cwise/lib/wrapper')({"args":["array","array","array"],"pre":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"body":{"body":"{_inline_40_arg0_=_inline_40_arg1_*_inline_40_arg1_+_inline_40_arg2_*_inline_40_arg2_}","args":[{"name":"_inline_40_arg0_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_40_arg1_","lvalue":false,"rvalue":true,"count":2},{"name":"_inline_40_arg2_","lvalue":false,"rvalue":true,"count":2}],"thisVars":[],"localVars":[]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cmag","blockSize":64})
+exports.mag = require('cwise/lib/wrapper')({"args":["array","array","array"],"pre":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"body":{"body":"{_inline_37_arg0_=_inline_37_arg1_*_inline_37_arg1_+_inline_37_arg2_*_inline_37_arg2_}","args":[{"name":"_inline_37_arg0_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_37_arg1_","lvalue":false,"rvalue":true,"count":2},{"name":"_inline_37_arg2_","lvalue":false,"rvalue":true,"count":2}],"thisVars":[],"localVars":[]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cmag","blockSize":64})
 
-exports.abs = require('cwise/lib/wrapper')({"args":["array","array","array"],"pre":{"body":"{this_sqrt=Math.sqrt}","args":[],"thisVars":["this_sqrt"],"localVars":[]},"body":{"body":"{_inline_43_arg0_=this_sqrt(_inline_43_arg1_*_inline_43_arg1_+_inline_43_arg2_*_inline_43_arg2_)}","args":[{"name":"_inline_43_arg0_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_43_arg1_","lvalue":false,"rvalue":true,"count":2},{"name":"_inline_43_arg2_","lvalue":false,"rvalue":true,"count":2}],"thisVars":["this_sqrt"],"localVars":[]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cabs","blockSize":64})
+exports.abs = require('cwise/lib/wrapper')({"args":["array","array","array"],"pre":{"body":"{this_sqrt=Math.sqrt}","args":[],"thisVars":["this_sqrt"],"localVars":[]},"body":{"body":"{_inline_40_arg0_=this_sqrt(_inline_40_arg1_*_inline_40_arg1_+_inline_40_arg2_*_inline_40_arg2_)}","args":[{"name":"_inline_40_arg0_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_40_arg1_","lvalue":false,"rvalue":true,"count":2},{"name":"_inline_40_arg2_","lvalue":false,"rvalue":true,"count":2}],"thisVars":["this_sqrt"],"localVars":[]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cabs","blockSize":64})
 
 //Same thing as atan2
 exports.arg = ops.atan2
@@ -7302,7 +7405,7 @@ function ndfft(dir, x, y) {
 }
 
 module.exports = ndfft
-},{"./lib/fft-matrix.js":18,"ndarray":22,"ndarray-ops":19,"typedarray-pool":24}],18:[function(require,module,exports){
+},{"./lib/fft-matrix.js":18,"ndarray":21,"ndarray-ops":19,"typedarray-pool":22}],18:[function(require,module,exports){
 var bits = require('bit-twiddle')
 
 function fft(dir, nrows, ncols, buffer, x_ptr, y_ptr, scratch_ptr) {
@@ -8092,76 +8195,7 @@ function eye(shape, dtype) {
 }
 exports.eye = eye
 
-},{"ndarray":22,"ndarray-ops":19,"typedarray-pool":24}],21:[function(require,module,exports){
-"use strict"
-
-var ndarray = require("ndarray")
-var fft = require("ndarray-fft")
-var ops = require("ndarray-ops")
-
-var pool = require("typedarray-pool")
-var nextPow2 = require("next-pow-2")
-
-var do_translate = require('cwise/lib/wrapper')({"args":["array","array","scalar","index","shape"],"pre":{"body":"{this_d=_inline_0_arg4_.length,this_cos=Math.cos,this_sin=Math.sin,this_weights=new Array(_inline_0_arg4_.length);for(var _inline_0_a=0;_inline_0_a<_inline_0_arg4_.length;++_inline_0_a)this_weights[_inline_0_a]=2*Math.PI*_inline_0_arg2_[_inline_0_a]/_inline_0_arg4_[_inline_0_a]}","args":[{"name":"_inline_0_arg0_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_0_arg1_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_0_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_0_arg3_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_0_arg4_","lvalue":false,"rvalue":true,"count":4}],"thisVars":["this_cos","this_d","this_sin","this_weights"],"localVars":["_inline_0_a"]},"body":{"body":"{for(var _inline_1_a,_inline_1_n,_inline_1_o,_inline_1_v=_inline_1_arg0_,_inline_1_c=_inline_1_arg1_,_inline_1_f=0;_inline_1_f<this_d;++_inline_1_f){var _inline_1_d=this_weights[_inline_1_f]*(2*_inline_1_arg3_[_inline_1_f]<_inline_1_arg4_[_inline_1_f]?_inline_1_arg3_[_inline_1_f]:_inline_1_arg3_[_inline_1_f]-_inline_1_arg4_[_inline_1_f]),_inline_1_e=this_cos(_inline_1_d),_inline_1_g=2*_inline_1_arg3_[_inline_1_f]==_inline_1_arg4_[_inline_1_f]?0:this_sin(_inline_1_d);_inline_1_a=_inline_1_v*(_inline_1_e+_inline_1_g),_inline_1_n=_inline_1_e*(_inline_1_c-_inline_1_v),_inline_1_o=_inline_1_g*(_inline_1_v+_inline_1_c),_inline_1_v=_inline_1_a-_inline_1_o,_inline_1_c=_inline_1_a+_inline_1_n}_inline_1_arg0_=_inline_1_v,_inline_1_arg1_=_inline_1_c}","args":[{"name":"_inline_1_arg0_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_1_arg1_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_1_arg2_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_1_arg3_","lvalue":false,"rvalue":true,"count":4},{"name":"_inline_1_arg4_","lvalue":false,"rvalue":true,"count":3}],"thisVars":["this_cos","this_d","this_sin","this_weights"],"localVars":["_inline_1_a","_inline_1_c","_inline_1_d","_inline_1_e","_inline_1_f","_inline_1_g","_inline_1_n","_inline_1_o","_inline_1_v"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cwise","blockSize":64})
-
-function translatePeriodicBC(arr, t) {
-  var s = arr.size
-  var y_t = pool.mallocDouble(s)
-    , y = ndarray(y_t,
-            arr.shape.slice(0)/*,
-            ndarray.stride(arr.shape, arr.order),
-            0*/)
-  ops.assigns(y, 0.0)
-  fft(1, arr, y)
-  do_translate(arr, y, t)
-  fft(-1, arr, y)
-  pool.freeDouble(y_t)
-  return arr
-}
-
-function translateZeroBC(arr, t) {
-  console.time("pre")
-  var d = arr.shape.length
-    , nshape = new Array(d)
-    , i, sz = 1
-  for(i=0; i<d; ++i) {
-    nshape[i] = nextPow2(2 * arr.shape[i] - 1)
-    if(Math.abs(t[i]) >= arr.shape[i]) {
-      ops.assigns(arr, 0.0)
-      return
-    }
-    sz *= nshape[i]
-  }
-  console.timeEnd("pre")
-  console.time("alloc")
-  /*var nstride = ndarray.stride(nshape, arr.order)*/
-  var x_t = pool.mallocDouble(sz)
-    , x = ndarray(x_t, nshape/*, nstride, 0*/)
-    , xl = x.lo.apply(x, arr.shape)
-    , xh = x.hi.apply(x, arr.shape)
-  ops.assigns(xl, 0)
-  ops.assign(xh, arr)
-  var y_t = pool.mallocDouble(sz)
-    , y = ndarray(y_t, nshape/*, nstride, 0*/)
-  ops.assigns(y, 0)
-  console.timeEnd("alloc")
-  console.time("filter")
-  fft(1, x, y)
-  //do_translate(x, y, t)
-  fft(-1, x, y)
-  console.timeEnd("filter")
-  console.time("post")
-  ops.assign(arr, xh)
-  pool.freeDouble(x_t)
-  pool.freeDouble(y_t)
-  console.timeEnd("post")
-  return arr
-}
-
-module.exports = translateZeroBC
-module.exports.wrap = translatePeriodicBC
-
-},{"cwise/lib/wrapper":10,"ndarray":22,"ndarray-fft":17,"ndarray-ops":19,"next-pow-2":23,"typedarray-pool":24}],22:[function(require,module,exports){
+},{"ndarray":21,"ndarray-ops":19,"typedarray-pool":22}],21:[function(require,module,exports){
 var iota = require("iota-array")
 var isBuffer = require("is-buffer")
 
@@ -8512,19 +8546,7 @@ function wrappedNDArrayCtor(data, shape, stride, offset) {
 
 module.exports = wrappedNDArrayCtor
 
-},{"iota-array":14,"is-buffer":15}],23:[function(require,module,exports){
-module.exports = function(v) {
-  v += v === 0
-  --v
-  v |= v >>> 1
-  v |= v >>> 2
-  v |= v >>> 4
-  v |= v >>> 8
-  v |= v >>> 16
-  return v + 1
-}
-
-},{}],24:[function(require,module,exports){
+},{"iota-array":14,"is-buffer":15}],22:[function(require,module,exports){
 (function (global){(function (){
 'use strict'
 
@@ -8779,7 +8801,7 @@ exports.clearCache = function clearCache() {
 }
 
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"bit-twiddle":3,"buffer":4,"dup":11}],25:[function(require,module,exports){
+},{"bit-twiddle":3,"buffer":4,"dup":11}],23:[function(require,module,exports){
 "use strict"
 
 function unique_pred(list, compare) {
@@ -8838,7 +8860,7 @@ function unique(list, compare, sorted) {
 
 module.exports = unique
 
-},{}],26:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 "use strict"
 
 var ndarray = require("ndarray")
@@ -8884,5 +8906,5 @@ module.exports = function zeros(shape, dtype) {
   return ndarray(new (dtypeToType(dtype))(sz), shape);
 }
 
-},{"ndarray":22}]},{},[1])(1)
+},{"ndarray":21}]},{},[1])(1)
 });

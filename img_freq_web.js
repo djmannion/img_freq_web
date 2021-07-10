@@ -8,7 +8,6 @@ const SCI = {
     scratch: require("ndarray-scratch"),
     fft: require("ndarray-fft"),
     cops: require("ndarray-complex"),
-    translate: require("ndarray-translate-fft"),
 };
 
 async function main() {
@@ -43,13 +42,15 @@ async function main() {
 
         SCI.cops.abs(absFreq, realArray, imagArray);
 
-        // take the logarithm
-        SCI.ops.logeq(absFreq);
+        absFreq = fftshift(absFreq);
 
-        // get the maximum for normalisation purposes
-        let max = SCI.ops.sup(absFreq);
+        // normalise to [0, 1]
+        normalise(absFreq);
 
-        SCI.translate.wrap(absFreq, [imgSize / 2, imgSize / 2]);
+        // convert to 'lightness'
+        linearToLightness(absFreq);
+        // convert to sRGB
+        linearTosRGB(absFreq);
 
         let absFreqImage = new ImageData(imgSize, imgSize);
 
@@ -57,7 +58,7 @@ async function main() {
 
         for (let iRow = 0; iRow < imgSize; iRow++) {
             for (let iCol = 0; iCol < imgSize; iCol++) {
-                let imgVal = absFreq.get(iRow, iCol) / max * 255;
+                let imgVal = absFreq.get(iRow, iCol) * 255;
                 for (let iRGB = 0; iRGB < 3; iRGB++) {
                     absFreqImage.data[iFlat] = imgVal;
                     iFlat++;
@@ -158,6 +159,108 @@ async function main() {
 
 function calcMean(array) {
     return SCI.ops.sum(array) / array.size;
+}
+
+
+function fftshift(array) {
+
+    let outArray = SCI.zeros(array.shape);
+
+    const imgSize = array.shape[0];
+
+    const halfSize = imgSize / 2;
+
+    for (let iSrcRow = 0; iSrcRow < imgSize; iSrcRow++) {
+        for (let iSrcCol = 0; iSrcCol < imgSize; iSrcCol++) {
+
+            let iDstRow, iDstCol;
+
+            if (iSrcRow < halfSize) {
+                iDstRow = halfSize + iSrcRow;
+            }
+            else {
+                iDstRow = iSrcRow - halfSize;
+            }
+
+            if (iSrcCol < halfSize) {
+                iDstCol = halfSize + iSrcCol;
+            }
+            else {
+                iDstCol = iSrcCol - halfSize;
+            }
+
+            outArray.set(iDstRow, iDstCol, array.get(iSrcRow, iSrcCol));
+
+        }
+    }
+
+    return outArray;
+}
+
+
+function normalise(array, oldMin, oldMax, newMin = 0, newMax = 1) {
+
+    oldMin = oldMin ?? SCI.ops.inf(array);
+    oldMax = oldMax ?? SCI.ops.sup(array);
+
+    const _convert = SCI.cwise(
+        {
+            args: ["array", "scalar", "scalar", "scalar", "scalar"],
+            body: function (o, oldMin, oldMax, newMin, newMax) {
+                o = (
+                    (
+                        (o - oldMin) * (newMax - newMin)
+                    ) / (oldMax - oldMin)
+                ) + newMin;
+            },
+        },
+    );
+
+    _convert(array, oldMin, oldMax, newMin, newMax);
+
+}
+
+
+function clip(array, min, max) {
+
+    const _clip = SCI.cwise(
+        {
+            args: ["array", "scalar", "scalar"],
+            body: function (o, clipMin, clipMax) {
+                if (o < clipMin) {
+                    o = clipMin;
+                }
+                else if (o > clipMax) {
+                    o = clipMax;
+                }
+            }
+        },
+    );
+
+    _clip(array, min, max);
+
+}
+
+
+function linearToLightness(img) {
+    // 'lightness' not really
+
+    const _linearToLightness = SCI.cwise(
+        {
+            args: ["array"],
+            body: function (o) {
+                if (o <= 0.008856) {
+                    o *= 903.3;
+                }
+                else {
+                    o = Math.pow(o, 1 / 3) * 116 - 16;
+                }
+                o /= 100.0;
+            },
+        },
+    );
+
+    _linearToLightness(img);
 }
 
 

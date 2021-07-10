@@ -22,6 +22,7 @@
     "ndarray-ops": "^1.2.2",
     "ndarray-scratch": "^1.2.0",
     "ndarray-squeeze": "^1.0.2",
+    "ndarray-translate": "^1.0.0",
     "ndarray-translate-fft": "^1.0.0",
     "zeros": "^1.0.0"
   }
