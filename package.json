@@ -1,0 +1,26 @@
+{
+  "name": "fft_web_demo",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "baboon-image": "^2.1.0",
+    "beefy": "^2.1.8",
+    "browserify": "^17.0.0",
+    "cwise": "^1.0.10",
+    "ndarray": "^1.0.19",
+    "ndarray-complex": "^1.0.3",
+    "ndarray-fft": "^1.0.3",
+    "ndarray-ops": "^1.2.2",
+    "ndarray-scratch": "^1.2.0",
+    "ndarray-squeeze": "^1.0.2",
+    "ndarray-translate-fft": "^1.0.0",
+    "zeros": "^1.0.0"
+  }
+}
