@@ -24,15 +24,112 @@ async function main() {
     const freqCanvas = document.getElementById("fftCanvas");
     const freqContext = freqCanvas.getContext("2d");
 
+    const filterCanvas = document.getElementById("filterCanvas");
+    const filterContext = filterCanvas.getContext("2d");
+
+    const outputCanvas = document.getElementById("outputCanvas");
+    const outputContext = outputCanvas.getContext("2d");
     let demoImageBlob = await (await fetch("img/demo_img.jpg")).blob();
 
     let [lumArray, lumMean] = await processImage(demoImageBlob);
 
-    let absFreq = processFFT(lumArray, lumMean);
+    let [realArray, imagArray] = processFFT(lumArray, lumMean);
 
-    return absFreq;
+    let filterArray = processFilter();
 
-    async function processFFT(lumArray, lumMean) {
+    let outputArray = processOutput(realArray, imagArray, filterArray);
+
+    return [realArray, imagArray, filterArray];
+
+    function processOutput(realArray, imagArray, filterArray) {
+
+        SCI.ops.muleq(realArray, filterArray);
+        SCI.ops.muleq(imagArray, filterArray);
+
+        SCI.fft(-1, realArray, imagArray);
+
+        normalise(realArray);
+
+        let outputImage = new ImageData(imgSize, imgSize);
+
+        let iFlat = 0;
+
+        for (let iRow = 0; iRow < imgSize; iRow++) {
+            for (let iCol = 0; iCol < imgSize; iCol++) {
+                let imgVal = realArray.get(iRow, iCol) * 255;
+                for (let iRGB = 0; iRGB < 3; iRGB++) {
+                    outputImage.data[iFlat] = imgVal;
+                    iFlat++;
+                }
+                outputImage.data[iFlat] = 255;
+                iFlat++;
+            }
+        }
+
+        outputContext.putImageData(outputImage, 0, 0);
+        return realArray;
+
+    }
+
+    function processFilter() {
+
+        let distArray = SCI.zeros([imgSize, imgSize]);
+
+        for (let iRow = 0; iRow < imgSize; iRow++) {
+            for (let iCol = 0; iCol < imgSize; iCol++) {
+                let dist = Math.sqrt(
+                    Math.pow(iRow - imgSize / 2, 2)
+                    + Math.pow(iCol - imgSize / 2, 2)
+                ) / (imgSize / 2);
+                distArray.set(iRow, iCol, dist);
+            }
+        }
+
+        const filtR = 0.1;
+
+        let filtArray = SCI.zeros([imgSize, imgSize]);
+
+        const prepFilter = SCI.cwise(
+            {
+                args: ["array", "array", "scalar"],
+                body: function (filt, dist, thresh) {
+                    if (dist > thresh) {
+                        filt = 1;
+                    }
+                    else {
+                        filt = 0;
+                    }
+                },
+            },
+        );
+
+        prepFilter(filtArray, distArray, filtR);
+
+        let filterImage = new ImageData(imgSize, imgSize);
+
+        let iFlat = 0;
+
+        for (let iRow = 0; iRow < imgSize; iRow++) {
+            for (let iCol = 0; iCol < imgSize; iCol++) {
+                let imgVal = filtArray.get(iRow, iCol) * 255;
+                for (let iRGB = 0; iRGB < 3; iRGB++) {
+                    filterImage.data[iFlat] = imgVal;
+                    iFlat++;
+                }
+                filterImage.data[iFlat] = 255;
+                iFlat++;
+            }
+        }
+
+        filterContext.putImageData(filterImage, 0, 0);
+
+        filtArray = fftshift(filtArray);
+
+        return filtArray;
+
+    }
+
+    function processFFT(lumArray, lumMean) {
 
         let realArray = SCI.scratch.clone(lumArray);
         let imagArray = SCI.zeros(lumArray.shape);
@@ -71,7 +168,7 @@ async function main() {
 
         freqContext.putImageData(absFreqImage, 0, 0);
 
-        return absFreq;
+        return [realArray, imagArray];
 
     }
 
