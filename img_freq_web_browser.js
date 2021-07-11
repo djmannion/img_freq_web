@@ -225,6 +225,10 @@ async function main() {
         // then convert to luminance
         let lumArray = linearRGBtoLuminance(imgArray);
 
+        let winArray = makeWindow(imgSize);
+
+        lumArray = blend(lumArray, winArray);
+
         // now for presentation, we need to convert it back into sRGB
         imgArray = SCI.scratch.clone(lumArray);
         linearTosRGB(imgArray);
@@ -265,6 +269,50 @@ function calcMean(array) {
 }
 
 
+function makeDistanceArray(imgSize) {
+
+    let distArray = SCI.zeros([imgSize, imgSize]);
+
+    let halfSize = imgSize / 2;
+
+    for (let iRow = 0; iRow < imgSize; iRow++) {
+        for (let iCol = 0; iCol < imgSize; iCol++) {
+            let dist = Math.sqrt(
+                Math.pow(iRow - halfSize, 2)
+                + Math.pow(iCol - halfSize, 2)
+            ) / halfSize;
+            distArray.set(iRow, iCol, dist);
+        }
+    }
+
+    return distArray;
+
+}
+
+
+function makeWindow(imgSize, innerProp = 0, outerProp = 1, winProp = 0.1, distArray) {
+
+    distArray = distArray ?? makeDistanceArray(imgSize);
+
+    let winArray = SCI.zeros([imgSize, imgSize]);
+
+    for (let iRow = 0; iRow < imgSize; iRow++) {
+        for (let iCol = 0; iCol < imgSize; iCol++) {
+
+            let dist = distArray.get(iRow, iCol);
+
+            if (dist < outerProp) {
+                winArray.set(iRow, iCol, 1);
+            }
+
+        }
+    }
+
+    return winArray;
+
+}
+
+
 function fftshift(array) {
 
     let outArray = SCI.zeros(array.shape);
@@ -298,6 +346,26 @@ function fftshift(array) {
     }
 
     return outArray;
+}
+
+
+function blend(srcArray, winArray) {
+
+    let outputArray = SCI.zeros(srcArray.shape);
+
+    const _blend = SCI.cwise(
+        {
+            args: ["array", "array", "array"],
+            body: function (output, src, win) {
+                output = (src * win) + (0.5 * (1 - win));
+            },
+        },
+    );
+
+    _blend(outputArray, srcArray, winArray);
+
+    return outputArray;
+
 }
 
 
