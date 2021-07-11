@@ -15,11 +15,13 @@ async function main() {
 
     const imgSize = 512;
 
-    //const offscreenCanvas = document.createElement("canvas");
-    //offscreenCanvas.width = imgSize;
-    //offscreenCanvas.height = imgSize;
-    const offscreenCanvas = document.getElementById("imageCanvas");
+    const offscreenCanvas = document.createElement("canvas");
+    offscreenCanvas.width = imgSize;
+    offscreenCanvas.height = imgSize;
     const offscreenContext = offscreenCanvas.getContext("2d");
+
+    const imageCanvas = document.getElementById("imageCanvas");
+    const imageContext = imageCanvas.getContext("2d");
 
     const freqCanvas = document.getElementById("fftCanvas");
     const freqContext = freqCanvas.getContext("2d");
@@ -30,7 +32,7 @@ async function main() {
     const outputCanvas = document.getElementById("outputCanvas");
     const outputContext = outputCanvas.getContext("2d");
 
-    let imgPath = "img/landscape.jpg";
+    let imgPath = "img/joe.jpg";
 
     let demoImageBlob = await (await fetch(imgPath)).blob();
 
@@ -245,7 +247,7 @@ async function main() {
             }
         }
 
-        offscreenContext.putImageData(resizedImage, 0, 0);
+        imageContext.putImageData(resizedImage, 0, 0);
 
         let lumMean = calcMean(lumArray);
 
