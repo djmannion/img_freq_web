@@ -28,7 +28,10 @@ async function main() {
 
     const outputCanvas = document.getElementById("outputCanvas");
     const outputContext = outputCanvas.getContext("2d");
-    let demoImageBlob = await (await fetch("img/demo_img.jpg")).blob();
+
+    let imgPath = "img/joe.jpg";
+
+    let demoImageBlob = await (await fetch(imgPath)).blob();
 
     let [lumArray, lumMean] = await processImage(demoImageBlob);
 
@@ -92,7 +95,7 @@ async function main() {
             {
                 args: ["array", "array", "scalar"],
                 body: function (filt, dist, thresh) {
-                    if (dist > thresh) {
+                    if (dist < thresh) {
                         filt = 1;
                     }
                     else {
