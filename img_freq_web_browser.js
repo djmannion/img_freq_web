@@ -20,6 +20,12 @@ async function main() {
     offscreenCanvas.height = imgSize;
     const offscreenContext = offscreenCanvas.getContext("2d");
 
+    const smallOffscreenCanvas = document.createElement("canvas");
+    smallOffscreenCanvas.id = "smallOffscreenCanvas";
+    smallOffscreenCanvas.width = imgSize;
+    smallOffscreenCanvas.height = imgSize;
+    const smallOffscreenContext = smallOffscreenCanvas.getContext("2d");
+
     const imageCanvas = document.getElementById("imageCanvas");
     const imageContext = imageCanvas.getContext("2d");
 
@@ -38,7 +44,7 @@ async function main() {
 
     let [lumArray, lumMean] = await processImage(demoImageBlob);
 
-    let [realArray, imagArray] = processFFT(lumArray, lumMean);
+    let [realArray, imagArray] = await processFFT(lumArray, lumMean);
 
     let filterArray = processFilter();
 
@@ -126,15 +132,13 @@ async function main() {
             }
         }
 
-        filterContext.putImageData(filterImage, 0, 0);
-
         filtArray = fftshift(filtArray);
 
         return filtArray;
 
     }
 
-    function processFFT(lumArray, lumMean) {
+    async function processFFT(lumArray, lumMean) {
 
         let realArray = SCI.scratch.clone(lumArray);
         let imagArray = SCI.zeros(lumArray.shape);
@@ -171,7 +175,59 @@ async function main() {
             }
         }
 
-        freqContext.putImageData(absFreqImage, 0, 0);
+        let zoomElement = document.getElementById("specZoom");
+
+        let zoomFactor = 1; // Number(zoomElement.value[0]);
+
+        let newSize = imgSize / zoomFactor;
+        let halfNewSize = newSize / 2;
+
+        let dirtyStart = halfNewSize;
+
+        offscreenContext.putImageData(
+            absFreqImage, 0, 0
+        );
+
+        let img = new Image();
+        img.src = offscreenCanvas.toDataURL();
+        img.width = imgSize * zoomFactor;
+        img.height = imgSize * zoomFactor;
+
+        smallOffscreenCanvas.width = imgSize * zoomFactor;
+        smallOffscreenCanvas.height = imgSize * zoomFactor;
+
+        smallOffscreenContext.putImageData(
+            absFreqImage,
+            0,
+            0,
+            0,
+            0,
+            imgSize * zoomFactor,
+            imgSize * zoomFactor,
+        );
+
+        //smallOffscreenCanvas.width = imgSize * zoomFactor;
+        //smallOffscreenCanvas.height = imgSize * zoomFactor;
+
+        offscreenContext.drawImage(
+            img,
+            0,
+            0,
+        )
+
+        let bitmap = offscreenContext.getImageData(
+            0, 0, imgSize, imgSize
+        );
+
+        freqContext.putImageData(
+            bitmap,
+            0,
+            0,
+            0,
+            0,
+            imgSize,
+            imgSize,
+        );
 
         return [realArray, imagArray];
 

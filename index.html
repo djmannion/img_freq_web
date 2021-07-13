@@ -29,25 +29,21 @@
                     <div>
                         <form>
                             <fieldset>
-                                <legend>Settings</legend>
+                                <legend>Image</legend>
 
-                                <fieldset>
-                                    <legend>Image</legend>
+                                <select name="inputImageSelect" id="inputImageSelect">
+                                    <option selected>Dog (Joe)</option>
+                                    <option>Landscape</option>
+                                    <option>Beach</option>
+                                    <option>Custom</option>
+                                </select>
 
-                                    <select name="inputImageSelect" id="inputImageSelect">
-                                        <option selected>Dog (Joe)</option>
-                                        <option>Landscape</option>
-                                        <option>Beach</option>
-                                        <option>Custom</option>
-                                    </select>
+                            </fieldset>
+                            <fieldset>
+                                <legend>Windowing</legend>
 
-                                </fieldset>
-                                <fieldset>
-                                    <legend>Windowing</legend>
-
-                                    <input type="checkbox" id="windowingActive" name="windowingActive">
-                                    <label for="windowingActive">Apply windowing</label>
-                                </fieldset>
+                                <input type="checkbox" id="windowingActive" name="windowingActive">
+                                <label for="windowingActive">Apply windowing</label>
                             </fieldset>
 
                         </form>
@@ -64,6 +60,18 @@
                         <canvas id="fftCanvas" width="512" height="512"></canvas>
                     </div>
                     <div>
+                        <form>
+                            <fieldset>
+                                <legend>Zoom</legend>
+
+                                <select name="specZoom" id="specZoom">
+                                    <option>1x</option>
+                                    <option>2x</option>
+                                    <option selected>4x</option>
+                                </select>
+
+                            </fieldset>
+                        </form>
                     </div>
                 </div>
             </div>
