@@ -11,6 +11,203 @@ const SCI = {
     cops: require("ndarray-complex"),
 };
 
+const TRIGGERS = {
+    init: 0,
+    imgSource: 1,
+    imgWindow: 2,
+}
+
+
+async function pipeline({data, trigger} = {}) {
+
+    if (trigger <= TRIGGERS.init) {
+        data = await initialiseData();
+        addHandlers(data);
+    }
+
+    if (trigger <= TRIGGERS.imgSource) {
+        await setImageSource(data);
+    }
+
+    if (trigger <= TRIGGERS.imgWindow) {
+        setImageWindow(data);
+        setImageOutput(data);
+        zeroCentreImage(data);
+    }
+
+    return data;
+
+}
+
+async function setImageSource(data) {
+
+    const sourceFilenames = {
+        "Dog (Joe)": "joe.jpg",
+        "Landscape": "landscape.jpg",
+        "Beach": "ocean.jpg",
+    }
+
+    const imageSource = data.el.imgSource.value;
+    const imagePath = `img/${sourceFilenames[imageSource]}`;
+
+    let imageBlob = await (await fetch(imagePath)).blob();
+
+    // we don't know the dimensions or anything yet, so we first create a temporary
+    // image bitmap so that we can get that info
+    const origImage = await createImageBitmap(imageBlob);
+
+    // want to resize so that the smallest dimension is `imgSize`; the other
+    // dimension can then be cropped
+    const minDim = Math.min(origImage.width, origImage.height);
+
+    const resizedWidth = origImage.width / minDim * data.imgSize;
+    const resizedHeight = origImage.height / minDim * data.imgSize;
+
+    // draw to the (invisible) canvas
+    data.el.context.offscreen.drawImage(
+        origImage,
+        0,
+        0,
+        origImage.width,
+        origImage.height,
+        0,
+        0,
+        resizedWidth,
+        resizedHeight,
+    );
+
+    // the `data` field will hold the RGBA array
+    const resizedImage = data.el.context.offscreen.getImageData(
+        0, 0, data.imgSize, data.imgSize
+    );
+
+    // now to convert it into an RGB ndarray
+    let imgArray = (
+        SCI.ndarray(
+            new Float64Array(resizedImage.data),
+            [data.imgSize, data.imgSize, 4]
+        ).hi(null, null, 3)
+    );
+
+    // now to [0, 1] range
+    SCI.ops.divseq(imgArray, 255);
+
+    // now map to linear
+    sRGBtoLinear(imgArray);
+
+    // then convert to luminance
+    data.lumND = linearRGBtoLuminance(imgArray);
+
+}
+
+function setImageWindow(data) {
+
+    let applyWindow = data.el.applyWindow.checked;
+
+    if (applyWindow) {
+        data.lumWindowedND = blend(data.lumND, data.windowND);
+    }
+    else {
+        data.lumWindowedND = SCI.scratch.clone(data.lumND);
+    }
+
+}
+
+
+function setImageOutput(data) {
+
+    let presImage = arrayToImageData(
+        data.lumWindowedND,
+        {normalise: false, toSRGB: true, toLightness: false},
+    );
+
+    data.el.context.image.putImageData(presImage, 0, 0);
+
+}
+
+function zeroCentreImage(data) {
+
+    data.lumMean = calcMean(data.lumWindowedND);
+
+    // centre the luminance array
+    SCI.ops.subseq(data.lumWindowedND, data.lumMean);
+
+}
+
+async function initialiseData() {
+
+    let data = {};
+
+    data.imgSize = 512;
+    data.imgDim = [data.imgSize, data.imgSize];
+
+    const offscreenCanvas = document.createElement("canvas");
+    offscreenCanvas.width = data.imgSize;
+    offscreenCanvas.height = data.imgSize;
+
+    // store the references to the important elements
+    data.el = {};
+
+    // canvases
+    data.el.canvas = {
+        offscreen: offscreenCanvas,
+        image: document.getElementById("imageCanvas"),
+        amp: document.getElementById("ampCanvas"),
+        filter: document.getElementById("filterCanvas"),
+        output: document.getElementById("outputCanvas"),
+    };
+
+    // contexts
+    data.el.context = {};
+    for (let [canvasName, canvas] of Object.entries(data.el.canvas)) {
+        data.el.context[canvasName] = canvas.getContext("2d");
+    }
+
+    data.el.imgSource = document.getElementById("inputImageSelect");
+    data.el.zoom = document.getElementById("specZoom");
+    data.el.applyWindow = document.getElementById("windowingActive");
+
+    // this will hold the zero-centred luminance image, without any windowing
+    data.lumND = SCI.zeros(data.imgDim);
+    data.lumWindowedND = SCI.zeros(data.imgDim);
+    // this will hold the mean of the luminance image, prior to zero centering
+    data.lumMean = null;
+
+    // holds the normalised distance from the centre
+    data.distND = makeDistanceArray(data.imgSize);
+
+    // holds the aperture that can optionally be applied to the input image
+    data.windowND = makeWindow(
+        {imgSize: data.imgSize, distArray: data.distND}
+    );
+
+    // holds the real, imaginary, and abs data from the FFT
+    // the 'shifted' version means that `fftshift` has been applied to it
+    data.fRealND = SCI.zeros(data.imgDim);
+    data.fImagND = SCI.zeros(data.imgDim);
+    data.fAbsND = SCI.zeros(data.imgDim);
+    data.fAbsShiftedND = SCI.zeros(data.imgDim);
+
+    // holds the filter info
+    data.filterND = SCI.zeros(data.imgDim);
+    data.filterShiftedND = SCI.zeros(data.imgDim);
+
+    return data;
+
+}
+
+function addHandlers(data) {
+
+    data.el.imgSource.addEventListener(
+        "change", () => {pipeline({data:data, trigger:TRIGGERS.imgSource})}
+    );
+
+    data.el.applyWindow.addEventListener(
+        "change", () => {pipeline({data:data, trigger:TRIGGERS.imgWindow})}
+    );
+}
+
+
 async function main() {
 
     const imgSize = 512;
@@ -20,16 +217,10 @@ async function main() {
     offscreenCanvas.height = imgSize;
     const offscreenContext = offscreenCanvas.getContext("2d");
 
-    const smallOffscreenCanvas = document.createElement("canvas");
-    smallOffscreenCanvas.id = "smallOffscreenCanvas";
-    smallOffscreenCanvas.width = imgSize;
-    smallOffscreenCanvas.height = imgSize;
-    const smallOffscreenContext = smallOffscreenCanvas.getContext("2d");
-
     const imageCanvas = document.getElementById("imageCanvas");
     const imageContext = imageCanvas.getContext("2d");
 
-    const freqCanvas = document.getElementById("fftCanvas");
+    const freqCanvas = document.getElementById("ampCanvas");
     const freqContext = freqCanvas.getContext("2d");
 
     const filterCanvas = document.getElementById("filterCanvas");
@@ -213,7 +404,7 @@ async function main() {
         // then convert to luminance
         let lumArray = linearRGBtoLuminance(imgArray);
 
-        let winArray = makeWindow(imgSize);
+        let winArray = makeWindow({imgSize: imgSize});
 
         lumArray = blend(lumArray, winArray);
 
@@ -261,7 +452,9 @@ function makeDistanceArray(imgSize) {
 }
 
 
-function makeWindow(imgSize, innerProp = 0, outerProp = 1, winProp = 0.1, distArray) {
+function makeWindow(
+    {imgSize, innerProp = 0, outerProp = 1, winProp = 0.1, distArray} = {}
+) {
 
     distArray = distArray ?? makeDistanceArray(imgSize);
 
@@ -552,7 +745,7 @@ function arrayToImageData(
 
 }
 
-module.exports = [main, arrayToImageData, SCI.ndarray];
+module.exports = [pipeline, SCI, main, arrayToImageData, SCI.ndarray];
 
 window.addEventListener("load", main);
 
