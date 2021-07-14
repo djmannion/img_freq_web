@@ -15,6 +15,8 @@ const TRIGGERS = {
     init: 0,
     imgSource: 1,
     imgWindow: 2,
+    filtChange: 3,
+    zoom: 4,
 }
 
 
@@ -33,6 +35,16 @@ async function pipeline({data, trigger} = {}) {
         setImageWindow(data);
         setImageOutput(data);
         zeroCentreImage(data);
+        calcFFT(data);
+        setFFTOutput(data);
+    }
+
+    if (trigger === TRIGGERS.zoom) {
+        setFFTOutput(data);
+    }
+
+    if (trigger <= TRIGGERS.filtChange) {
+        setFilter(data);
     }
 
     return data;
@@ -166,6 +178,10 @@ async function initialiseData() {
     data.el.imgSource = document.getElementById("inputImageSelect");
     data.el.zoom = document.getElementById("specZoom");
     data.el.applyWindow = document.getElementById("windowingActive");
+    data.el.lowPassActive = document.getElementById("lowPassActive");
+    data.el.lowPassCutoff = document.getElementById("lowPassCutoff");
+    data.el.highPassActive = document.getElementById("highPassActive");
+    data.el.highPassCutoff = document.getElementById("highPassCutoff");
 
     // this will hold the zero-centred luminance image, without any windowing
     data.lumND = SCI.zeros(data.imgDim);
@@ -189,6 +205,8 @@ async function initialiseData() {
     data.fAbsShiftedND = SCI.zeros(data.imgDim);
 
     // holds the filter info
+    data.filterLow = null;
+    data.filterHigh = null;
     data.filterND = SCI.zeros(data.imgDim);
     data.filterShiftedND = SCI.zeros(data.imgDim);
 
@@ -205,8 +223,106 @@ function addHandlers(data) {
     data.el.applyWindow.addEventListener(
         "change", () => {pipeline({data:data, trigger:TRIGGERS.imgWindow})}
     );
+
+    data.el.zoom.addEventListener(
+        "change", () => {pipeline({data:data, trigger:TRIGGERS.zoom})}
+    );
+
+    data.el.lowPassCutoff.addEventListener(
+        "input",
+        handleFilterCutoffChange,
+    );
+
+    data.el.lowPassActive.addEventListener("change", handleFilterActiveChange);
+
+    function filterEndFromEvent(evt) {
+        return evt.target.id.slice(0, evt.target.id.indexOf("Pass"));
+    }
+
+    function handleFilterActiveChange(evt) {
+
+        // "lowPass" or "highPass"
+        let filterEnd = filterEndFromEvent(evt);
+
+        // disable or enable the cutoff slider
+        data.el[filterEnd + "PassCutoff"].disabled = !evt.target.checked;
+
+        // trigger an evaluation of the slider change event
+        data.el[filterEnd + "PassCutoff"].dispatchEvent(new Event("input"));
+
+    }
+
+    function handleFilterCutoffChange(evt) {
+
+        // "lowPass" or "highPass"
+        let activeFilterEnd = filterEndFromEvent(evt);
+        console.log(activeFilterEnd);
+        let otherFilterEnd = (activeFilterEnd === "low") ? "high" : "low";
+
+        let otherFilterActive = data.el[otherFilterEnd + "PassActive"].checked;
+
+        let activeFilterEl = data.el[activeFilterEnd + "PassCutoff"];
+        let activeFilterCutoff = activeFilterEl.valueAsNumber;
+
+        let otherFilterEl = data.el[otherFilterEnd + "PassCutoff"];
+        let otherFilterCutoff = otherFilterEl.valueAsNumber;
+
+        if (otherFilterActive) {
+
+            if (activeFilterEnd === "low" && activeFilterCutoff >= otherFilterCutoff) {
+                activeFilterCutoff = otherFilterCutoff - 10;
+                activeFilterEl.value = activeFilterCutoff;
+            }
+            if (activeFilterEnd === "high" && activeFilterCutoff <= otherFilterCutoff) {
+                activeFilterCutoff = otherFilterCutoff + 10;
+                activeFilterEl.value = activeFilterCutoff;
+            }
+
+        }
+
+    }
+
 }
 
+
+function calcFFT(data) {
+
+    data.fRealND = SCI.scratch.clone(data.lumWindowedND);
+    data.fImagND = SCI.zeros(data.imgDim);
+
+    SCI.fft(+1, data.fRealND, data.fImagND);
+
+    SCI.cops.abs(data.fAbsND, data.fRealND, data.fImagND);
+
+    data.fAbsShiftedND = fftshift(data.fAbsND);
+
+}
+
+function setFFTOutput(data) {
+
+    let zoomFactor = Number(data.el.zoom.value[0]);
+
+    let absFreqImage = arrayToImageData(
+        SCI.scratch.clone(data.fAbsShiftedND),
+        {normalise: true, toSRGB: true, toLightness: true, zoomFactor: zoomFactor},
+    );
+
+    data.el.context.amp.putImageData(
+        absFreqImage,
+        0,
+        0,
+    );
+
+}
+
+function setFilter(data) {
+
+    const lowPassActive = data.el.lowPassActive.value;
+    const highPassActive = data.el.highPassActive.value;
+
+
+
+}
 
 async function main() {
 
