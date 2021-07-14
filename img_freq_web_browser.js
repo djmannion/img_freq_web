@@ -17,6 +17,8 @@ const TRIGGERS = {
     imgWindow: 2,
     filtChange: 3,
     zoom: 4,
+    filtUpdate: 4,
+    filtSet: 5,
 }
 
 
@@ -45,6 +47,15 @@ async function pipeline({data, trigger} = {}) {
 
     if (trigger <= TRIGGERS.filtChange) {
         setFilter(data);
+        setFilterOutput(data);
+    }
+
+    if (trigger === TRIGGERS.zoom) {
+        setFilterOutput(data);
+    }
+
+    if (trigger <= TRIGGERS.filtSet && trigger !== TRIGGERS.filtChange) {
+        calcOutput(data);
     }
 
     return data;
@@ -129,7 +140,7 @@ function setImageWindow(data) {
 function setImageOutput(data) {
 
     let presImage = arrayToImageData(
-        data.lumWindowedND,
+        SCI.scratch.clone(data.lumWindowedND),
         {normalise: false, toSRGB: true, toLightness: false},
     );
 
@@ -178,9 +189,7 @@ async function initialiseData() {
     data.el.imgSource = document.getElementById("inputImageSelect");
     data.el.zoom = document.getElementById("specZoom");
     data.el.applyWindow = document.getElementById("windowingActive");
-    data.el.lowPassActive = document.getElementById("lowPassActive");
     data.el.lowPassCutoff = document.getElementById("lowPassCutoff");
-    data.el.highPassActive = document.getElementById("highPassActive");
     data.el.highPassCutoff = document.getElementById("highPassCutoff");
 
     // this will hold the zero-centred luminance image, without any windowing
@@ -228,38 +237,21 @@ function addHandlers(data) {
         "change", () => {pipeline({data:data, trigger:TRIGGERS.zoom})}
     );
 
-    data.el.lowPassCutoff.addEventListener(
-        "input",
-        handleFilterCutoffChange,
-    );
+    for (let el of [data.el.lowPassCutoff, data.el.highPassCutoff]) {
+        el.addEventListener("input", handleFilterCutoffChange);
+        el.addEventListener("change", () => pipeline({data: data, trigger: TRIGGERS.filtSet}));
+    }
 
-    data.el.lowPassActive.addEventListener("change", handleFilterActiveChange);
 
     function filterEndFromEvent(evt) {
         return evt.target.id.slice(0, evt.target.id.indexOf("Pass"));
-    }
-
-    function handleFilterActiveChange(evt) {
-
-        // "lowPass" or "highPass"
-        let filterEnd = filterEndFromEvent(evt);
-
-        // disable or enable the cutoff slider
-        data.el[filterEnd + "PassCutoff"].disabled = !evt.target.checked;
-
-        // trigger an evaluation of the slider change event
-        data.el[filterEnd + "PassCutoff"].dispatchEvent(new Event("input"));
-
     }
 
     function handleFilterCutoffChange(evt) {
 
         // "lowPass" or "highPass"
         let activeFilterEnd = filterEndFromEvent(evt);
-        console.log(activeFilterEnd);
         let otherFilterEnd = (activeFilterEnd === "low") ? "high" : "low";
-
-        let otherFilterActive = data.el[otherFilterEnd + "PassActive"].checked;
 
         let activeFilterEl = data.el[activeFilterEnd + "PassCutoff"];
         let activeFilterCutoff = activeFilterEl.valueAsNumber;
@@ -267,18 +259,16 @@ function addHandlers(data) {
         let otherFilterEl = data.el[otherFilterEnd + "PassCutoff"];
         let otherFilterCutoff = otherFilterEl.valueAsNumber;
 
-        if (otherFilterActive) {
-
-            if (activeFilterEnd === "low" && activeFilterCutoff >= otherFilterCutoff) {
-                activeFilterCutoff = otherFilterCutoff - 10;
-                activeFilterEl.value = activeFilterCutoff;
-            }
-            if (activeFilterEnd === "high" && activeFilterCutoff <= otherFilterCutoff) {
-                activeFilterCutoff = otherFilterCutoff + 10;
-                activeFilterEl.value = activeFilterCutoff;
-            }
-
+        if (activeFilterEnd === "low" && activeFilterCutoff >= otherFilterCutoff) {
+            activeFilterCutoff = otherFilterCutoff - 10;
+            activeFilterEl.value = activeFilterCutoff;
         }
+        if (activeFilterEnd === "high" && activeFilterCutoff <= otherFilterCutoff) {
+            activeFilterCutoff = otherFilterCutoff + 10;
+            activeFilterEl.value = activeFilterCutoff;
+        }
+
+        pipeline({data: data, trigger: TRIGGERS.filtChange});
 
     }
 
@@ -317,10 +307,59 @@ function setFFTOutput(data) {
 
 function setFilter(data) {
 
-    const lowPassActive = data.el.lowPassActive.value;
-    const highPassActive = data.el.highPassActive.value;
+    let filterLowRaw = data.el.lowPassCutoff.valueAsNumber;
+    let filterHighRaw = data.el.highPassCutoff.valueAsNumber;
 
+    const exponent = 4;
 
+    data.filterLow = Math.pow(filterLowRaw / 100, exponent);
+    data.filterHigh = Math.pow(filterHighRaw / 100, exponent) * 1.5;
+
+    prepFilter(data.filterShiftedND, data.distND, data.filterLow, data.filterHigh);
+
+    data.filterND = fftshift(data.filterShiftedND);
+
+}
+
+function setFilterOutput(data) {
+
+    let zoomFactor = Number(data.el.zoom.value[0]);
+
+    let filterImage = arrayToImageData(
+        SCI.scratch.clone(data.filterShiftedND),
+        {normalise: false, toSRGB: false, toLightness: false, zoomFactor: zoomFactor},
+    );
+
+    data.el.context.filter.putImageData(
+        filterImage,
+        0,
+        0,
+    );
+
+}
+
+function calcOutput(data) {
+
+    let oRealND = SCI.scratch.clone(data.fRealND);
+    let oImagND = SCI.scratch.clone(data.fImagND);
+
+    SCI.ops.muleq(oRealND, data.filterND);
+    SCI.ops.muleq(oImagND, data.filterND);
+
+    SCI.fft(-1, oRealND, oImagND);
+
+    SCI.ops.addseq(oRealND, data.lumMean);
+
+    let outputImage = arrayToImageData(
+        oRealND,
+        {normalise: false, toSRGB: true, toLightness: false},
+    );
+
+    data.el.context.output.putImageData(
+        outputImage,
+        0,
+        0,
+    );
 
 }
 
@@ -541,6 +580,19 @@ async function main() {
 
 }
 
+const prepFilter = SCI.cwise(
+    {
+        args: ["array", "array", "scalar", "scalar"],
+        body: function (filt, dist, inThresh, outThresh) {
+            if (dist >= inThresh && dist <= outThresh) {
+                filt = 1;
+            }
+            else {
+                filt = 0;
+            }
+        },
+    },
+);
 
 function calcMean(array) {
     return SCI.ops.sum(array) / array.size;

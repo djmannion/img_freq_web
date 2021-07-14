@@ -42,7 +42,7 @@
                                 <legend>Windowing</legend>
 
                                 <input type="checkbox" id="windowingActive" name="windowingActive">
-                                <label for="windowingActive">Apply windowing</label>
+                                <label for="windowingActive">Apply window</label>
                             </fieldset>
 
                         </form>
@@ -85,28 +85,19 @@
                     </div>
                     <div>
                         <form>
+
                             <fieldset>
-                                <legend>Settings</legend>
+                                <legend>Low cutoff</legend>
 
-                                <fieldset>
-                                    <legend>Low-pass</legend>
+                                <input type="range" id="lowPassCutoff" min="0" max="100" step="1" value="0">
+                                <!--<label for="lowPassCutoff">Cutoff</label>-->
+                            </fieldset>
 
-                                    <input type="checkbox" id="lowPassActive" name="lowPassActive" checked>
-                                    <label for="lowPassActive">Active</label>
+                            <fieldset>
+                                <legend>High cutoff</legend>
 
-                                    <input type="range" id="lowPassCutoff" min="0" max="100" step="1">
-                                    <label for="lowPassCutoff">Cutoff</label>
-                                </fieldset>
-
-                                <fieldset>
-                                    <legend>High-pass</legend>
-
-                                    <input type="checkbox" id="highPassActive" name="highPassActive">
-                                    <label for="highPassActive">Active</label>
-
-                                    <input type="range" id="highPassCutoff" min="0" max="100" step="1" disabled>
-                                    <label for="highPassCutoff">Cutoff</label>
-                                </fieldset>
+                                <input type="range" id="highPassCutoff" min="0" max="100" step="1" value="50">
+                                <!--<label for="highPassCutoff">Cutoff</label>-->
                             </fieldset>
                         </form>
                     </div>
