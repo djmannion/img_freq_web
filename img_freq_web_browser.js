@@ -9,6 +9,7 @@ const SCI = {
     scratch: require("ndarray-scratch"),
     fft: require("ndarray-fft"),
     cops: require("ndarray-complex"),
+    toPolar: require("ndarray-log-polar"),
 };
 
 const TRIGGERS = {
@@ -68,16 +69,25 @@ async function pipeline({data, trigger} = {}) {
 
 async function setImageSource(data) {
 
-    const sourceFilenames = {
-        "Dog (Joe)": "joe.jpg",
-        "Landscape": "landscape.jpg",
-        "Beach": "ocean.jpg",
-    };
-
     const imageSource = data.el.imgSource.value;
-    const imagePath = `img/${sourceFilenames[imageSource]}`;
 
-    let imageBlob = await (await fetch(imagePath)).blob();
+    let imageBlob;
+
+    if (imageSource === "Custom") {
+        imageBlob = data.customImg;
+    }
+    else {
+
+        const sourceFilenames = {
+            "Dog (Joe)": "joe.jpg",
+            "Landscape": "landscape.jpg",
+            "Beach": "ocean.jpg",
+        };
+
+        const imagePath = `img/${sourceFilenames[imageSource]}`;
+
+        imageBlob = await (await fetch(imagePath)).blob();
+    }
 
     // we don't know the dimensions or anything yet, so we first create a temporary
     // image bitmap so that we can get that info
@@ -161,6 +171,44 @@ function zeroCentreImage(data) {
 
 }
 
+async function handleUpload(data) {
+
+    const filePath = data.el.filePicker.files[0];
+
+    let imgSrc = await new Promise(
+        function (resolve, reject) {
+
+            const reader = new FileReader();
+
+            reader.onload = () => resolve(reader.result);
+
+            reader.readAsDataURL(filePath);
+        }
+    );
+
+    let img = await new Promise(
+        function (resolve) {
+            let imgElement = new Image();
+            imgElement.onload = () => resolve(imgElement);
+            imgElement.src = imgSrc;
+        }
+    );
+
+    data.customImg = img;
+
+    let customOption = document.createElement("option");
+    customOption.value = "Custom";
+    customOption.innerText = "Custom";
+
+    data.el.imgSource.appendChild(customOption);
+    data.el.imgSource.options[data.el.imgSource.options.length - 1].selected = true;
+
+    let imgSourceChange = new CustomEvent("change");
+
+    data.el.imgSource.dispatchEvent(imgSourceChange);
+
+}
+
 async function initialiseData() {
 
     let data = {};
@@ -195,6 +243,12 @@ async function initialiseData() {
     data.el.applyWindow = document.getElementById("windowingActive");
     data.el.lowPassCutoff = document.getElementById("lowPassCutoff");
     data.el.highPassCutoff = document.getElementById("highPassCutoff");
+    data.el.filePicker = document.getElementById("filePicker");
+    data.el.fileButton = document.getElementById("fileButton");
+
+    data.el.fileButton.addEventListener("click", () => data.el.filePicker.click(), false);
+
+    data.el.filePicker.addEventListener("change", () => handleUpload(data), false);
 
     // this will hold the zero-centred luminance image, without any windowing
     data.lumND = SCI.zeros(data.imgDim);
@@ -704,7 +758,7 @@ function arrayToImageData(
 
 window.addEventListener("load", main);
 
-},{"cwise":9,"ndarray":21,"ndarray-complex":16,"ndarray-fft":17,"ndarray-ops":19,"ndarray-scratch":20,"zeros":24}],2:[function(require,module,exports){
+},{"cwise":9,"ndarray":24,"ndarray-complex":16,"ndarray-fft":17,"ndarray-log-polar":20,"ndarray-ops":21,"ndarray-scratch":22,"zeros":27}],2:[function(require,module,exports){
 'use strict'
 
 exports.byteLength = byteLength
@@ -3314,7 +3368,7 @@ function generateCWiseOp(proc, typesig) {
 }
 module.exports = generateCWiseOp
 
-},{"uniq":23}],7:[function(require,module,exports){
+},{"uniq":26}],7:[function(require,module,exports){
 "use strict"
 
 // The function below is called when constructing a cwise function object, and does the following:
@@ -3600,7 +3654,7 @@ function preprocess(func) {
 
 module.exports = preprocess
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"esprima":12,"uniq":23}],9:[function(require,module,exports){
+},{"esprima":12,"uniq":26}],9:[function(require,module,exports){
 "use strict"
 
 var parse   = require("cwise-parser")
@@ -7693,7 +7747,7 @@ exports.abs = require('cwise/lib/wrapper')({"args":["array","array","array"],"pr
 //Same thing as atan2
 exports.arg = ops.atan2
 
-},{"cwise/lib/wrapper":10,"ndarray-ops":19}],17:[function(require,module,exports){
+},{"cwise/lib/wrapper":10,"ndarray-ops":21}],17:[function(require,module,exports){
 'use strict'
 
 var ops = require('ndarray-ops')
@@ -7776,7 +7830,7 @@ function ndfft(dir, x, y) {
 }
 
 module.exports = ndfft
-},{"./lib/fft-matrix.js":18,"ndarray":21,"ndarray-ops":19,"typedarray-pool":22}],18:[function(require,module,exports){
+},{"./lib/fft-matrix.js":18,"ndarray":24,"ndarray-ops":21,"typedarray-pool":25}],18:[function(require,module,exports){
 var bits = require('bit-twiddle')
 
 function fft(dir, nrows, ncols, buffer, x_ptr, y_ptr, scratch_ptr) {
@@ -7996,6 +8050,147 @@ function fftBluestein(dir, nrows, ncols, buffer, x_ptr, y_ptr, scratch_ptr) {
 }
 
 },{"bit-twiddle":3}],19:[function(require,module,exports){
+"use strict"
+
+function interp1d(arr, x) {
+  var ix = Math.floor(x)
+    , fx = x - ix
+    , s0 = 0 <= ix   && ix   < arr.shape[0]
+    , s1 = 0 <= ix+1 && ix+1 < arr.shape[0]
+    , w0 = s0 ? +arr.get(ix)   : 0.0
+    , w1 = s1 ? +arr.get(ix+1) : 0.0
+  return (1.0-fx)*w0 + fx*w1
+}
+
+function interp2d(arr, x, y) {
+  var ix = Math.floor(x)
+    , fx = x - ix
+    , s0 = 0 <= ix   && ix   < arr.shape[0]
+    , s1 = 0 <= ix+1 && ix+1 < arr.shape[0]
+    , iy = Math.floor(y)
+    , fy = y - iy
+    , t0 = 0 <= iy   && iy   < arr.shape[1]
+    , t1 = 0 <= iy+1 && iy+1 < arr.shape[1]
+    , w00 = s0&&t0 ? arr.get(ix  ,iy  ) : 0.0
+    , w01 = s0&&t1 ? arr.get(ix  ,iy+1) : 0.0
+    , w10 = s1&&t0 ? arr.get(ix+1,iy  ) : 0.0
+    , w11 = s1&&t1 ? arr.get(ix+1,iy+1) : 0.0
+  return (1.0-fy) * ((1.0-fx)*w00 + fx*w10) + fy * ((1.0-fx)*w01 + fx*w11)
+}
+
+function interp3d(arr, x, y, z) {
+  var ix = Math.floor(x)
+    , fx = x - ix
+    , s0 = 0 <= ix   && ix   < arr.shape[0]
+    , s1 = 0 <= ix+1 && ix+1 < arr.shape[0]
+    , iy = Math.floor(y)
+    , fy = y - iy
+    , t0 = 0 <= iy   && iy   < arr.shape[1]
+    , t1 = 0 <= iy+1 && iy+1 < arr.shape[1]
+    , iz = Math.floor(z)
+    , fz = z - iz
+    , u0 = 0 <= iz   && iz   < arr.shape[2]
+    , u1 = 0 <= iz+1 && iz+1 < arr.shape[2]
+    , w000 = s0&&t0&&u0 ? arr.get(ix,iy,iz)       : 0.0
+    , w010 = s0&&t1&&u0 ? arr.get(ix,iy+1,iz)     : 0.0
+    , w100 = s1&&t0&&u0 ? arr.get(ix+1,iy,iz)     : 0.0
+    , w110 = s1&&t1&&u0 ? arr.get(ix+1,iy+1,iz)   : 0.0
+    , w001 = s0&&t0&&u1 ? arr.get(ix,iy,iz+1)     : 0.0
+    , w011 = s0&&t1&&u1 ? arr.get(ix,iy+1,iz+1)   : 0.0
+    , w101 = s1&&t0&&u1 ? arr.get(ix+1,iy,iz+1)   : 0.0
+    , w111 = s1&&t1&&u1 ? arr.get(ix+1,iy+1,iz+1) : 0.0
+  return (1.0-fz) * ((1.0-fy) * ((1.0-fx)*w000 + fx*w100) + fy * ((1.0-fx)*w010 + fx*w110)) + fz * ((1.0-fy) * ((1.0-fx)*w001 + fx*w101) + fy * ((1.0-fx)*w011 + fx*w111))
+}
+
+function interpNd(arr) {
+  var d = arr.shape.length|0
+    , ix = new Array(d)
+    , fx = new Array(d)
+    , s0 = new Array(d)
+    , s1 = new Array(d)
+    , i, t
+  for(i=0; i<d; ++i) {
+    t = +arguments[i+1]
+    ix[i] = Math.floor(t)
+    fx[i] = t - ix[i]
+    s0[i] = (0 <= ix[i]   && ix[i]   < arr.shape[i])
+    s1[i] = (0 <= ix[i]+1 && ix[i]+1 < arr.shape[i])
+  }
+  var r = 0.0, j, w, idx
+i_loop:
+  for(i=0; i<(1<<d); ++i) {
+    w = 1.0
+    idx = arr.offset
+    for(j=0; j<d; ++j) {
+      if(i & (1<<j)) {
+        if(!s1[j]) {
+          continue i_loop
+        }
+        w *= fx[j]
+        idx += arr.stride[j] * (ix[j] + 1)
+      } else {
+        if(!s0[j]) {
+          continue i_loop
+        }
+        w *= 1.0 - fx[j]
+        idx += arr.stride[j] * ix[j]
+      }
+    }
+    r += w * arr.data[idx]
+  }
+  return r
+}
+
+function interpolate(arr, x, y, z) {
+  switch(arr.shape.length) {
+    case 0:
+      return 0.0
+    case 1:
+      return interp1d(arr, x)
+    case 2:
+      return interp2d(arr, x, y)
+    case 3:
+      return interp3d(arr, x, y, z)
+    default:
+      return interpNd.apply(undefined, arguments)
+  }
+}
+module.exports = interpolate
+module.exports.d1 = interp1d
+module.exports.d2 = interp2d
+module.exports.d3 = interp3d
+
+},{}],20:[function(require,module,exports){
+'use strict'
+
+module.exports = toPolar
+
+var ops = require('ndarray-ops')
+var warp = require('ndarray-warp')
+
+function toPolar(polar, rect, center) {
+  var ntheta = polar.shape[0]
+  var nr     = polar.shape[1]
+  if(!center) {
+    center = [rect.shape[0]/2, rect.shape[1]/2]
+  }
+  var maxDiam = 0.0
+  for(var i=0; i<2; ++i) {
+    maxDiam += Math.pow(Math.max(center[0], rect.shape[0]-center[0]), 2)
+  }
+  maxDiam = Math.sqrt(maxDiam)
+  ops.assigns(polar, 0)
+
+  warp(polar, rect, function(out, inp) {
+    var t = inp[1] / ntheta * Math.PI * 2.0
+    var r = Math.exp(Math.log(maxDiam) * inp[0] / nr)
+    out[0] = r * Math.cos(t) + center[0]
+    out[1] = r * Math.sin(t) + center[1]
+  })
+
+  return polar
+}
+},{"ndarray-ops":21,"ndarray-warp":23}],21:[function(require,module,exports){
 "use strict"
 
 var compile = require("cwise-compiler")
@@ -8458,7 +8653,7 @@ exports.equals = compile({
 
 
 
-},{"cwise-compiler":5}],20:[function(require,module,exports){
+},{"cwise-compiler":5}],22:[function(require,module,exports){
 "use strict"
 
 var ndarray = require("ndarray")
@@ -8566,7 +8761,39 @@ function eye(shape, dtype) {
 }
 exports.eye = eye
 
-},{"ndarray":21,"ndarray-ops":19,"typedarray-pool":22}],21:[function(require,module,exports){
+},{"ndarray":24,"ndarray-ops":21,"typedarray-pool":25}],23:[function(require,module,exports){
+'use strict'
+
+var interp  = require('ndarray-linear-interpolate')
+
+
+var do_warp = require('cwise/lib/wrapper')({"args":["index","array","scalar","scalar","scalar"],"pre":{"body":"{this_warped=new Array(_inline_42_arg4_)}","args":[{"name":"_inline_42_arg0_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_42_arg1_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_42_arg2_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_42_arg3_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_42_arg4_","lvalue":false,"rvalue":true,"count":1}],"thisVars":["this_warped"],"localVars":[]},"body":{"body":"{_inline_43_arg2_(this_warped,_inline_43_arg0_),_inline_43_arg1_=_inline_43_arg3_.apply(void 0,this_warped)}","args":[{"name":"_inline_43_arg0_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_43_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_43_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_43_arg3_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_43_arg4_","lvalue":false,"rvalue":false,"count":0}],"thisVars":["this_warped"],"localVars":[]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"warpND","blockSize":64})
+
+var do_warp_1 = require('cwise/lib/wrapper')({"args":["index","array","scalar","scalar","scalar"],"pre":{"body":"{this_warped=[0]}","args":[],"thisVars":["this_warped"],"localVars":[]},"body":{"body":"{_inline_46_arg2_(this_warped,_inline_46_arg0_),_inline_46_arg1_=_inline_46_arg3_(_inline_46_arg4_,this_warped[0])}","args":[{"name":"_inline_46_arg0_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_46_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_46_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_46_arg3_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_46_arg4_","lvalue":false,"rvalue":true,"count":1}],"thisVars":["this_warped"],"localVars":[]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"warp1D","blockSize":64})
+
+var do_warp_2 = require('cwise/lib/wrapper')({"args":["index","array","scalar","scalar","scalar"],"pre":{"body":"{this_warped=[0,0]}","args":[],"thisVars":["this_warped"],"localVars":[]},"body":{"body":"{_inline_49_arg2_(this_warped,_inline_49_arg0_),_inline_49_arg1_=_inline_49_arg3_(_inline_49_arg4_,this_warped[0],this_warped[1])}","args":[{"name":"_inline_49_arg0_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_49_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_49_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_49_arg3_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_49_arg4_","lvalue":false,"rvalue":true,"count":1}],"thisVars":["this_warped"],"localVars":[]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"warp2D","blockSize":64})
+
+var do_warp_3 = require('cwise/lib/wrapper')({"args":["index","array","scalar","scalar","scalar"],"pre":{"body":"{this_warped=[0,0,0]}","args":[],"thisVars":["this_warped"],"localVars":[]},"body":{"body":"{_inline_52_arg2_(this_warped,_inline_52_arg0_),_inline_52_arg1_=_inline_52_arg3_(_inline_52_arg4_,this_warped[0],this_warped[1],this_warped[2])}","args":[{"name":"_inline_52_arg0_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_52_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_52_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_52_arg3_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_52_arg4_","lvalue":false,"rvalue":true,"count":1}],"thisVars":["this_warped"],"localVars":[]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"warp3D","blockSize":64})
+
+module.exports = function warp(dest, src, func) {
+  switch(src.shape.length) {
+    case 1:
+      do_warp_1(dest, func, interp.d1, src)
+      break
+    case 2:
+      do_warp_2(dest, func, interp.d2, src)
+      break
+    case 3:
+      do_warp_3(dest, func, interp.d3, src)
+      break
+    default:
+      do_warp(dest, func, interp.bind(undefined, src), src.shape.length)
+      break
+  }
+  return dest
+}
+
+},{"cwise/lib/wrapper":10,"ndarray-linear-interpolate":19}],24:[function(require,module,exports){
 var iota = require("iota-array")
 var isBuffer = require("is-buffer")
 
@@ -8917,7 +9144,7 @@ function wrappedNDArrayCtor(data, shape, stride, offset) {
 
 module.exports = wrappedNDArrayCtor
 
-},{"iota-array":14,"is-buffer":15}],22:[function(require,module,exports){
+},{"iota-array":14,"is-buffer":15}],25:[function(require,module,exports){
 (function (global){(function (){
 'use strict'
 
@@ -9172,7 +9399,7 @@ exports.clearCache = function clearCache() {
 }
 
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"bit-twiddle":3,"buffer":4,"dup":11}],23:[function(require,module,exports){
+},{"bit-twiddle":3,"buffer":4,"dup":11}],26:[function(require,module,exports){
 "use strict"
 
 function unique_pred(list, compare) {
@@ -9231,7 +9458,7 @@ function unique(list, compare, sorted) {
 
 module.exports = unique
 
-},{}],24:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 "use strict"
 
 var ndarray = require("ndarray")
@@ -9277,5 +9504,5 @@ module.exports = function zeros(shape, dtype) {
   return ndarray(new (dtypeToType(dtype))(sz), shape);
 }
 
-},{"ndarray":21}]},{},[1])(1)
+},{"ndarray":24}]},{},[1])(1)
 });

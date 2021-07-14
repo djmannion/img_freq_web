@@ -8,6 +8,7 @@ const SCI = {
     scratch: require("ndarray-scratch"),
     fft: require("ndarray-fft"),
     cops: require("ndarray-complex"),
+    toPolar: require("ndarray-log-polar"),
 };
 
 const TRIGGERS = {
@@ -67,16 +68,25 @@ async function pipeline({data, trigger} = {}) {
 
 async function setImageSource(data) {
 
-    const sourceFilenames = {
-        "Dog (Joe)": "joe.jpg",
-        "Landscape": "landscape.jpg",
-        "Beach": "ocean.jpg",
-    };
-
     const imageSource = data.el.imgSource.value;
-    const imagePath = `img/${sourceFilenames[imageSource]}`;
 
-    let imageBlob = await (await fetch(imagePath)).blob();
+    let imageBlob;
+
+    if (imageSource === "Custom") {
+        imageBlob = data.customImg;
+    }
+    else {
+
+        const sourceFilenames = {
+            "Dog (Joe)": "joe.jpg",
+            "Landscape": "landscape.jpg",
+            "Beach": "ocean.jpg",
+        };
+
+        const imagePath = `img/${sourceFilenames[imageSource]}`;
+
+        imageBlob = await (await fetch(imagePath)).blob();
+    }
 
     // we don't know the dimensions or anything yet, so we first create a temporary
     // image bitmap so that we can get that info
@@ -160,6 +170,44 @@ function zeroCentreImage(data) {
 
 }
 
+async function handleUpload(data) {
+
+    const filePath = data.el.filePicker.files[0];
+
+    let imgSrc = await new Promise(
+        function (resolve, reject) {
+
+            const reader = new FileReader();
+
+            reader.onload = () => resolve(reader.result);
+
+            reader.readAsDataURL(filePath);
+        }
+    );
+
+    let img = await new Promise(
+        function (resolve) {
+            let imgElement = new Image();
+            imgElement.onload = () => resolve(imgElement);
+            imgElement.src = imgSrc;
+        }
+    );
+
+    data.customImg = img;
+
+    let customOption = document.createElement("option");
+    customOption.value = "Custom";
+    customOption.innerText = "Custom";
+
+    data.el.imgSource.appendChild(customOption);
+    data.el.imgSource.options[data.el.imgSource.options.length - 1].selected = true;
+
+    let imgSourceChange = new CustomEvent("change");
+
+    data.el.imgSource.dispatchEvent(imgSourceChange);
+
+}
+
 async function initialiseData() {
 
     let data = {};
@@ -194,6 +242,12 @@ async function initialiseData() {
     data.el.applyWindow = document.getElementById("windowingActive");
     data.el.lowPassCutoff = document.getElementById("lowPassCutoff");
     data.el.highPassCutoff = document.getElementById("highPassCutoff");
+    data.el.filePicker = document.getElementById("filePicker");
+    data.el.fileButton = document.getElementById("fileButton");
+
+    data.el.fileButton.addEventListener("click", () => data.el.filePicker.click(), false);
+
+    data.el.filePicker.addEventListener("change", () => handleUpload(data), false);
 
     // this will hold the zero-centred luminance image, without any windowing
     data.lumND = SCI.zeros(data.imgDim);

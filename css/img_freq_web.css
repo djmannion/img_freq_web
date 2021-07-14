@@ -47,3 +47,6 @@ canvas {
     border-color: darkblue;
 }
 
+#filePicker {
+    display: none;
+}
