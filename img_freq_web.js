@@ -58,7 +58,7 @@ async function main() {
 
         SCI.fft(-1, realArray, imagArray);
 
-        normalise(realArray);
+        normaliseArray(realArray);
 
         let outputImage = new ImageData(imgSize, imgSize);
 
@@ -115,21 +115,16 @@ async function main() {
 
         prepFilter(filtArray, distArray, filtR);
 
-        let filterImage = new ImageData(imgSize, imgSize);
+        let zoomElement = document.getElementById("specZoom");
 
-        let iFlat = 0;
+        let zoomFactor = Number(zoomElement.value[0]);
 
-        for (let iRow = 0; iRow < imgSize; iRow++) {
-            for (let iCol = 0; iCol < imgSize; iCol++) {
-                let imgVal = filtArray.get(iRow, iCol) * 255;
-                for (let iRGB = 0; iRGB < 3; iRGB++) {
-                    filterImage.data[iFlat] = imgVal;
-                    iFlat++;
-                }
-                filterImage.data[iFlat] = 255;
-                iFlat++;
-            }
-        }
+        let filterImage = arrayToImageData(
+            filtArray,
+            {normalise: true, toSRGB: true, toLightness: true, zoomFactor: zoomFactor},
+        );
+
+        filterContext.putImageData(filterImage, 0, 0);
 
         filtArray = fftshift(filtArray);
 
@@ -150,82 +145,19 @@ async function main() {
 
         absFreq = fftshift(absFreq);
 
-        // normalise to [0, 1]
-        normalise(absFreq);
-
-        // convert to 'lightness'
-        linearToLightness(absFreq);
-        // convert to sRGB
-        linearTosRGB(absFreq);
-
-        let absFreqImage = new ImageData(imgSize, imgSize);
-
-        let iFlat = 0;
-
-        for (let iRow = 0; iRow < imgSize; iRow++) {
-            for (let iCol = 0; iCol < imgSize; iCol++) {
-                let imgVal = absFreq.get(iRow, iCol) * 255;
-                for (let iRGB = 0; iRGB < 3; iRGB++) {
-                    absFreqImage.data[iFlat] = imgVal;
-                    iFlat++;
-                }
-                absFreqImage.data[iFlat] = 255;
-                iFlat++;
-            }
-        }
-
         let zoomElement = document.getElementById("specZoom");
 
-        let zoomFactor = 1; // Number(zoomElement.value[0]);
+        let zoomFactor = Number(zoomElement.value[0]);
 
-        let newSize = imgSize / zoomFactor;
-        let halfNewSize = newSize / 2;
-
-        let dirtyStart = halfNewSize;
-
-        offscreenContext.putImageData(
-            absFreqImage, 0, 0
-        );
-
-        let img = new Image();
-        img.src = offscreenCanvas.toDataURL();
-        img.width = imgSize * zoomFactor;
-        img.height = imgSize * zoomFactor;
-
-        smallOffscreenCanvas.width = imgSize * zoomFactor;
-        smallOffscreenCanvas.height = imgSize * zoomFactor;
-
-        smallOffscreenContext.putImageData(
-            absFreqImage,
-            0,
-            0,
-            0,
-            0,
-            imgSize * zoomFactor,
-            imgSize * zoomFactor,
-        );
-
-        //smallOffscreenCanvas.width = imgSize * zoomFactor;
-        //smallOffscreenCanvas.height = imgSize * zoomFactor;
-
-        offscreenContext.drawImage(
-            img,
-            0,
-            0,
-        )
-
-        let bitmap = offscreenContext.getImageData(
-            0, 0, imgSize, imgSize
+        let absFreqImage = arrayToImageData(
+            absFreq,
+            {normalise: true, toSRGB: true, toLightness: true, zoomFactor: zoomFactor},
         );
 
         freqContext.putImageData(
-            bitmap,
+            absFreqImage,
             0,
             0,
-            0,
-            0,
-            imgSize,
-            imgSize,
         );
 
         return [realArray, imagArray];
@@ -284,29 +216,12 @@ async function main() {
 
         lumArray = blend(lumArray, winArray);
 
-        // now for presentation, we need to convert it back into sRGB
-        imgArray = SCI.scratch.clone(lumArray);
-        linearTosRGB(imgArray);
+        let presImage = arrayToImageData(
+            lumArray,
+            {normalise: false, toSRGB: true, toLightness: false},
+        );
 
-        // and into [0, 255] range
-        SCI.ops.mulseq(imgArray, 255);
-
-        // now alter our image to be ready for display on a canvas
-        let iFlat = 0;
-
-        for (let iRow = 0; iRow < imgSize; iRow++) {
-            for (let iCol = 0; iCol < imgSize; iCol++) {
-                let pixVal = imgArray.get(iRow, iCol);
-                for (let iRGB = 0; iRGB < 3; iRGB++) {
-                    resizedImage.data[iFlat] = pixVal;
-                    iFlat++;
-                }
-                resizedImage.data[iFlat] = 255;
-                iFlat++;
-            }
-        }
-
-        imageContext.putImageData(resizedImage, 0, 0);
+        imageContext.putImageData(presImage, 0, 0);
 
         let lumMean = calcMean(lumArray);
 
@@ -424,7 +339,7 @@ function blend(srcArray, winArray) {
 }
 
 
-function normalise(array, oldMin, oldMax, newMin = 0, newMax = 1) {
+function normaliseArray(array, oldMin, oldMax, newMin = 0, newMax = 1) {
 
     oldMin = oldMin ?? SCI.ops.inf(array);
     oldMax = oldMax ?? SCI.ops.sup(array);
@@ -554,6 +469,88 @@ function linearTosRGB(img) {
     return _linearTosRGB(img);
 }
 
-module.exports = [main, sRGBtoLinear, linearTosRGB];
+
+function arrayToImageData(
+    imgArray,
+    {normalise = false, toSRGB = true, toLightness = false, zoomFactor = 1} = {},
+) {
+
+    const imgSize = imgArray.shape[0];
+
+    const needsZoom = zoomFactor !== 1;
+
+    let subImgArray;
+    let srcSize;
+
+    if (needsZoom) {
+
+        const halfImgSize = imgSize / 2;
+
+        srcSize = imgSize / zoomFactor;
+        const halfSrcSize = srcSize / 2;
+
+        const iStart = halfImgSize - halfSrcSize;
+        const iEnd = iStart + srcSize;
+
+        let subImgVec = new Float64Array(srcSize * srcSize);
+
+        let iSubImgVec = 0;
+
+        for (let iRow = iStart; iRow < iEnd; iRow++) {
+            for (let iCol = iStart; iCol < iEnd; iCol++) {
+                let imgVal = imgArray.get(iRow, iCol);
+                subImgVec[iSubImgVec] = imgVal;
+                iSubImgVec++;
+            }
+        }
+
+        subImgArray = SCI.ndarray(subImgVec, [srcSize, srcSize]);
+    }
+    else {
+        subImgArray = imgArray;
+    }
+
+    if (normalise) {
+        normaliseArray(subImgArray);
+    }
+
+    if (toLightness) {
+        linearToLightness(subImgArray);
+    }
+
+    if (toSRGB) {
+        linearTosRGB(subImgArray);
+    }
+
+    let outputImage = new ImageData(imgSize, imgSize);
+
+    let iFlat = 0;
+
+    for (let iRow = 0; iRow < imgSize; iRow++) {
+
+        let iSrcRow = needsZoom ? Math.floor(iRow / imgSize * srcSize) : iRow;
+
+        for (let iCol = 0; iCol < imgSize; iCol++) {
+
+            let iSrcCol = needsZoom ? Math.floor(iCol / imgSize * srcSize) : iCol;
+
+            let imgVal = subImgArray.get(iSrcRow, iSrcCol) * 255;
+
+            for (let iRGB = 0; iRGB < 3; iRGB++) {
+                outputImage.data[iFlat] = imgVal;
+                iFlat++;
+            }
+
+            outputImage.data[iFlat] = 255;
+
+            iFlat++;
+        }
+    }
+
+    return outputImage;
+
+}
+
+module.exports = [main, arrayToImageData, SCI.ndarray];
 
 window.addEventListener("load", main);
