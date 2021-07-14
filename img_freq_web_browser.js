@@ -22,6 +22,10 @@ const TRIGGERS = {
 }
 
 
+async function main() {
+    pipeline({trigger: TRIGGERS.init});
+}
+
 async function pipeline({data, trigger} = {}) {
 
     if (trigger <= TRIGGERS.init) {
@@ -260,11 +264,11 @@ function addHandlers(data) {
         let otherFilterCutoff = otherFilterEl.valueAsNumber;
 
         if (activeFilterEnd === "low" && activeFilterCutoff >= otherFilterCutoff) {
-            activeFilterCutoff = otherFilterCutoff - 10;
+            activeFilterCutoff = otherFilterCutoff - 1;
             activeFilterEl.value = activeFilterCutoff;
         }
         if (activeFilterEnd === "high" && activeFilterCutoff <= otherFilterCutoff) {
-            activeFilterCutoff = otherFilterCutoff + 10;
+            activeFilterCutoff = otherFilterCutoff + 1;
             activeFilterEl.value = activeFilterCutoff;
         }
 
@@ -363,222 +367,6 @@ function calcOutput(data) {
 
 }
 
-async function main() {
-
-    const imgSize = 512;
-
-    const offscreenCanvas = document.createElement("canvas");
-    offscreenCanvas.width = imgSize;
-    offscreenCanvas.height = imgSize;
-    const offscreenContext = offscreenCanvas.getContext("2d");
-
-    const imageCanvas = document.getElementById("imageCanvas");
-    const imageContext = imageCanvas.getContext("2d");
-
-    const freqCanvas = document.getElementById("ampCanvas");
-    const freqContext = freqCanvas.getContext("2d");
-
-    const filterCanvas = document.getElementById("filterCanvas");
-    const filterContext = filterCanvas.getContext("2d");
-
-    const outputCanvas = document.getElementById("outputCanvas");
-    const outputContext = outputCanvas.getContext("2d");
-
-    let imgPath = "img/joe.jpg";
-
-    let demoImageBlob = await (await fetch(imgPath)).blob();
-
-    let [lumArray, lumMean] = await processImage(demoImageBlob);
-
-    let [realArray, imagArray] = await processFFT(lumArray, lumMean);
-
-    let filterArray = processFilter();
-
-    let outputArray = processOutput(realArray, imagArray, filterArray);
-
-    return [realArray, imagArray, filterArray];
-
-    function processOutput(realArray, imagArray, filterArray) {
-
-        SCI.ops.muleq(realArray, filterArray);
-        SCI.ops.muleq(imagArray, filterArray);
-
-        SCI.fft(-1, realArray, imagArray);
-
-        normaliseArray(realArray);
-
-        let outputImage = new ImageData(imgSize, imgSize);
-
-        let iFlat = 0;
-
-        for (let iRow = 0; iRow < imgSize; iRow++) {
-            for (let iCol = 0; iCol < imgSize; iCol++) {
-                let imgVal = realArray.get(iRow, iCol) * 255;
-                for (let iRGB = 0; iRGB < 3; iRGB++) {
-                    outputImage.data[iFlat] = imgVal;
-                    iFlat++;
-                }
-                outputImage.data[iFlat] = 255;
-                iFlat++;
-            }
-        }
-
-        outputContext.putImageData(outputImage, 0, 0);
-        return realArray;
-
-    }
-
-    function processFilter() {
-
-        let distArray = SCI.zeros([imgSize, imgSize]);
-
-        for (let iRow = 0; iRow < imgSize; iRow++) {
-            for (let iCol = 0; iCol < imgSize; iCol++) {
-                let dist = Math.sqrt(
-                    Math.pow(iRow - imgSize / 2, 2)
-                    + Math.pow(iCol - imgSize / 2, 2)
-                ) / (imgSize / 2);
-                distArray.set(iRow, iCol, dist);
-            }
-        }
-
-        const filtR = 0.1;
-
-        let filtArray = SCI.zeros([imgSize, imgSize]);
-
-        const prepFilter = SCI.cwise(
-            {
-                args: ["array", "array", "scalar"],
-                body: function (filt, dist, thresh) {
-                    if (dist < thresh) {
-                        filt = 1;
-                    }
-                    else {
-                        filt = 0;
-                    }
-                },
-            },
-        );
-
-        prepFilter(filtArray, distArray, filtR);
-
-        let zoomElement = document.getElementById("specZoom");
-
-        let zoomFactor = Number(zoomElement.value[0]);
-
-        let filterImage = arrayToImageData(
-            filtArray,
-            {normalise: true, toSRGB: true, toLightness: true, zoomFactor: zoomFactor},
-        );
-
-        filterContext.putImageData(filterImage, 0, 0);
-
-        filtArray = fftshift(filtArray);
-
-        return filtArray;
-
-    }
-
-    async function processFFT(lumArray, lumMean) {
-
-        let realArray = SCI.scratch.clone(lumArray);
-        let imagArray = SCI.zeros(lumArray.shape);
-
-        SCI.fft(+1, realArray, imagArray);
-
-        let absFreq = SCI.zeros(lumArray.shape);
-
-        SCI.cops.abs(absFreq, realArray, imagArray);
-
-        absFreq = fftshift(absFreq);
-
-        let zoomElement = document.getElementById("specZoom");
-
-        let zoomFactor = Number(zoomElement.value[0]);
-
-        let absFreqImage = arrayToImageData(
-            absFreq,
-            {normalise: true, toSRGB: true, toLightness: true, zoomFactor: zoomFactor},
-        );
-
-        freqContext.putImageData(
-            absFreqImage,
-            0,
-            0,
-        );
-
-        return [realArray, imagArray];
-
-    }
-
-    async function processImage(image) {
-
-        // `image` is any source that can be parsed by `createImageBitmap`
-
-        // we don't know the dimensions or anything yet, so we first create a temporary
-        // image bitmap so that we can get that info
-        const origImage = await createImageBitmap(image);
-
-        // want to resize so that the smallest dimension is `imgSize`; the other
-        // dimension can then be cropped
-        const minDim = Math.min(origImage.width, origImage.height);
-
-        const resizedWidth = origImage.width / minDim * imgSize;
-        const resizedHeight = origImage.height / minDim * imgSize;
-
-        // draw to the (invisible) canvas
-        offscreenContext.drawImage(
-            origImage,
-            0,
-            0,
-            origImage.width,
-            origImage.height,
-            0,
-            0,
-            resizedWidth,
-            resizedHeight,
-        );
-
-        // the `data` field will hold the RGBA array
-        const resizedImage = offscreenContext.getImageData(0, 0, imgSize, imgSize);
-
-        // now to convert it into an RGB ndarray
-        let imgArray = (
-            SCI.ndarray(
-                new Float64Array(resizedImage.data),
-                [imgSize, imgSize, 4]
-            ).hi(null, null, 3)
-        );
-
-        // now to [0, 1] range
-        SCI.ops.divseq(imgArray, 255);
-
-        // now map to linear
-        sRGBtoLinear(imgArray);
-
-        // then convert to luminance
-        let lumArray = linearRGBtoLuminance(imgArray);
-
-        let winArray = makeWindow({imgSize: imgSize});
-
-        lumArray = blend(lumArray, winArray);
-
-        let presImage = arrayToImageData(
-            lumArray,
-            {normalise: false, toSRGB: true, toLightness: false},
-        );
-
-        imageContext.putImageData(presImage, 0, 0);
-
-        let lumMean = calcMean(lumArray);
-
-        // centre the luminance array
-        SCI.ops.subseq(lumArray, lumMean);
-
-        return [lumArray, lumMean];
-    }
-
-}
 
 const prepFilter = SCI.cwise(
     {
@@ -593,6 +381,7 @@ const prepFilter = SCI.cwise(
         },
     },
 );
+
 
 function calcMean(array) {
     return SCI.ops.sum(array) / array.size;
@@ -912,8 +701,6 @@ function arrayToImageData(
     return outputImage;
 
 }
-
-module.exports = [pipeline, SCI, main, arrayToImageData, SCI.ndarray];
 
 window.addEventListener("load", main);
 
