@@ -18,7 +18,7 @@ const TRIGGERS = {
     zoom: 4,
     filtUpdate: 4,
     filtSet: 5,
-}
+};
 
 
 async function main() {
@@ -71,7 +71,7 @@ async function setImageSource(data) {
         "Dog (Joe)": "joe.jpg",
         "Landscape": "landscape.jpg",
         "Beach": "ocean.jpg",
-    }
+    };
 
     const imageSource = data.el.imgSource.value;
     const imagePath = `img/${sourceFilenames[imageSource]}`;
@@ -229,15 +229,15 @@ async function initialiseData() {
 function addHandlers(data) {
 
     data.el.imgSource.addEventListener(
-        "change", () => {pipeline({data:data, trigger:TRIGGERS.imgSource})}
+        "change", () => {pipeline({data:data, trigger:TRIGGERS.imgSource});}
     );
 
     data.el.applyWindow.addEventListener(
-        "change", () => {pipeline({data:data, trigger:TRIGGERS.imgWindow})}
+        "change", () => {pipeline({data:data, trigger:TRIGGERS.imgWindow});}
     );
 
     data.el.zoom.addEventListener(
-        "change", () => {pipeline({data:data, trigger:TRIGGERS.zoom})}
+        "change", () => {pipeline({data:data, trigger:TRIGGERS.zoom});}
     );
 
     for (let el of [data.el.lowPassCutoff, data.el.highPassCutoff]) {
@@ -396,8 +396,8 @@ function makeDistanceArray(imgSize) {
     for (let iRow = 0; iRow < imgSize; iRow++) {
         for (let iCol = 0; iCol < imgSize; iCol++) {
             let dist = Math.sqrt(
-                Math.pow(iRow - halfSize, 2)
-                + Math.pow(iCol - halfSize, 2)
+                Math.pow(iRow - halfSize, 2) +
+                Math.pow(iCol - halfSize, 2)
             ) / halfSize;
             distArray.set(iRow, iCol, dist);
         }

@@ -15,6 +15,7 @@
     "beefy": "^2.1.8",
     "browserify": "^17.0.0",
     "cwise": "^1.0.10",
+    "jshint": "^2.13.0",
     "luminance": "^1.0.3",
     "ndarray": "^1.0.19",
     "ndarray-complex": "^1.0.3",
