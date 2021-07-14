@@ -173,6 +173,8 @@ function zeroCentreImage(data) {
 
 async function handleUpload(data) {
 
+    const alreadyCustom = data.customImg !== null;
+
     const filePath = data.el.filePicker.files[0];
 
     let imgSrc = await new Promise(
@@ -196,11 +198,14 @@ async function handleUpload(data) {
 
     data.customImg = img;
 
-    let customOption = document.createElement("option");
-    customOption.value = "Custom";
-    customOption.innerText = "Custom";
+    if (!alreadyCustom) {
+        let customOption = document.createElement("option");
+        customOption.value = "Custom";
+        customOption.innerText = "Custom";
 
-    data.el.imgSource.appendChild(customOption);
+        data.el.imgSource.appendChild(customOption);
+    }
+
     data.el.imgSource.options[data.el.imgSource.options.length - 1].selected = true;
 
     let imgSourceChange = new CustomEvent("change");
@@ -215,6 +220,9 @@ async function initialiseData() {
 
     data.imgSize = 512;
     data.imgDim = [data.imgSize, data.imgSize];
+
+    // will hold a user-uploaded image, if they have done so
+    data.customImg = null;
 
     const offscreenCanvas = document.createElement("canvas");
     offscreenCanvas.width = data.imgSize;
@@ -245,10 +253,6 @@ async function initialiseData() {
     data.el.highPassCutoff = document.getElementById("highPassCutoff");
     data.el.filePicker = document.getElementById("filePicker");
     data.el.fileButton = document.getElementById("fileButton");
-
-    data.el.fileButton.addEventListener("click", () => data.el.filePicker.click(), false);
-
-    data.el.filePicker.addEventListener("change", () => handleUpload(data), false);
 
     // this will hold the zero-centred luminance image, without any windowing
     data.lumND = SCI.zeros(data.imgDim);
@@ -282,6 +286,9 @@ async function initialiseData() {
 }
 
 function addHandlers(data) {
+
+    data.el.fileButton.addEventListener("click", () => data.el.filePicker.click(), false);
+    data.el.filePicker.addEventListener("change", () => handleUpload(data), false);
 
     data.el.imgSource.addEventListener(
         "change", () => {pipeline({data:data, trigger:TRIGGERS.imgSource});}
