@@ -326,7 +326,7 @@ async function initialiseData() {
     data.el.context.amp.strokeStyle = "orange";
 
     // relative maximum for the SF amplitude line plot
-    data.ampMeanMax = 0.75
+    data.ampMeanMax = 0.75;
 
     data.el.imgSource = document.getElementById("inputImageSelect");
     data.el.zoom = document.getElementById("specZoom");
@@ -402,7 +402,7 @@ function addHandlers(data) {
 
     data.el.sfPlotActive.addEventListener(
         "change", () => {pipeline({data: data, trigger: TRIGGERS.sfPlot});}
-    )
+    );
 
     data.el.specAxes.addEventListener(
         "change", () => {handleSpecAxesChange(data);}, false
@@ -499,12 +499,6 @@ function setFFTOutput(data) {
             {normalise: true, toSRGB: true, toLightness: true},
         );
 
-        if (data.el.sfPlotActive.checked) {
-            var logND = SCI.ndarray(data.fSFAmpArray.map(Math.log));
-            normaliseArray(logND);
-            SCI.ops.mulseq(logND, data.ampMeanMax);
-        }
-
     }
 
     data.el.context.amp.putImageData(
@@ -515,19 +509,25 @@ function setFFTOutput(data) {
 
     if (data.el.specAxes.value === "Log-polar" && data.el.sfPlotActive.checked) {
 
+        let logND = SCI.ndarray(data.fSFAmpArray.map(Math.log));
+        normaliseArray(logND);
+        SCI.ops.mulseq(logND, data.ampMeanMax);
+
         data.el.context.amp.beginPath();
 
         data.el.context.amp.moveTo(0, data.imgSize - logND.get(0) * data.imgSize);
 
         for (let iCol = 1; iCol < data.imgSize; iCol++) {
-            data.el.context.amp.lineTo(iCol, data.imgSize - logND.get(iCol) * data.imgSize);
+            data.el.context.amp.lineTo(
+                iCol,
+                data.imgSize - logND.get(iCol) * data.imgSize,
+            );
         }
 
         data.el.context.amp.stroke();
         data.el.context.amp.closePath();
 
     }
-
 
 }
 
