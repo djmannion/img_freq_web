@@ -40,6 +40,8 @@
                                 <input type="file" id="filePicker" accept="image/*">
                                 <button id="fileButton" type="button">Upload image</button>
 
+                                <button id="webcamButton" type="button">Grab from webcam</button>
+
                             </fieldset>
                             <fieldset>
                                 <legend>Windowing</legend>
@@ -63,6 +65,16 @@
                     </div>
                     <div>
                         <form>
+
+                            <fieldset>
+                                <legend>Depiction</legend>
+
+                                <select name="specAxes" id="specAxes">
+                                    <option selected>Cartesian</option>
+                                    <option>Log-polar</option>
+                                </select>
+                            </fieldset>
+
                             <fieldset>
                                 <legend>Zoom</legend>
 

@@ -19,6 +19,7 @@ const TRIGGERS = {
     zoom: 4,
     filtUpdate: 4,
     filtSet: 5,
+    axesChange: 6,
 };
 
 
@@ -62,6 +63,11 @@ async function pipeline({data, trigger} = {}) {
         calcOutput(data);
     }
 
+    if (trigger === TRIGGERS.axesChange) {
+        setFFTOutput(data);
+        setFilterOutput(data);
+    }
+
     return data;
 
 }
@@ -74,6 +80,9 @@ async function setImageSource(data) {
 
     if (imageSource === "Custom") {
         imageBlob = data.customImg;
+    }
+    else if (imageSource === "Webcam") {
+        imageBlob = data.webcamImg;
     }
     else {
 
@@ -170,6 +179,63 @@ function zeroCentreImage(data) {
 
 }
 
+async function handleWebcam(data) {
+
+    const alreadyWebcam = data.webcamImg !== null;
+
+    let webcam;
+
+    try {
+        webcam = await navigator.mediaDevices.getUserMedia(
+            {video: true, audio: false}
+        );
+    }
+    catch (err) {
+        return;
+    }
+
+    await new Promise(
+        (resolve) => {
+            data.el.video.addEventListener("loadeddata", resolve, {once: true});
+            data.el.video.srcObject = webcam;
+        }
+    );
+
+    await new Promise(
+        (resolve) => {
+            data.el.video.addEventListener("play", resolve, {once: true});
+            data.el.video.play();
+        }
+    );
+
+    data.el.video.pause();
+
+    for (let track of webcam.getTracks()) {
+        track.stop();
+    }
+
+    if (!alreadyWebcam) {
+        let webcamOption = document.createElement("option");
+        webcamOption.value = "Webcam";
+        webcamOption.innerText = "Webcam";
+
+        data.el.imgSource.appendChild(webcamOption);
+    }
+
+    for (let option of data.el.imgSource.options) {
+        if (option.text === "Webcam") {
+            option.selected = true;
+            break;
+        }
+    }
+
+    data.webcamImg = data.el.video;
+
+    let imgSourceChange = new CustomEvent("change");
+
+    data.el.imgSource.dispatchEvent(imgSourceChange);
+}
+
 async function handleUpload(data) {
 
     const alreadyCustom = data.customImg !== null;
@@ -205,7 +271,12 @@ async function handleUpload(data) {
         data.el.imgSource.appendChild(customOption);
     }
 
-    data.el.imgSource.options[data.el.imgSource.options.length - 1].selected = true;
+    for (let option of data.el.imgSource.options) {
+        if (option.text === "Custom") {
+            option.selected = true;
+            break;
+        }
+    }
 
     let imgSourceChange = new CustomEvent("change");
 
@@ -222,6 +293,7 @@ async function initialiseData() {
 
     // will hold a user-uploaded image, if they have done so
     data.customImg = null;
+    data.webcamImg = null;
 
     const offscreenCanvas = document.createElement("canvas");
     offscreenCanvas.width = data.imgSize;
@@ -252,6 +324,10 @@ async function initialiseData() {
     data.el.highPassCutoff = document.getElementById("highPassCutoff");
     data.el.filePicker = document.getElementById("filePicker");
     data.el.fileButton = document.getElementById("fileButton");
+    data.el.webcamButton = document.getElementById("webcamButton");
+    data.el.specAxes = document.getElementById("specAxes");
+
+    data.el.video = document.createElement("video");
 
     // this will hold the zero-centred luminance image, without any windowing
     data.lumND = SCI.zeros(data.imgDim);
@@ -274,11 +350,18 @@ async function initialiseData() {
     data.fAbsND = SCI.zeros(data.imgDim);
     data.fAbsShiftedND = SCI.zeros(data.imgDim);
 
+    // the log-polar transformed version of `data.fAbsShiftedND`
+    data.fAbsPolarND = SCI.zeros(data.imgDim);
+
+    data.fSFAmpArray = null;
+
     // holds the filter info
     data.filterLow = null;
     data.filterHigh = null;
     data.filterND = SCI.zeros(data.imgDim);
     data.filterShiftedND = SCI.zeros(data.imgDim);
+
+    data.filterPolarND = SCI.zeros(data.imgDim);
 
     return data;
 
@@ -288,6 +371,10 @@ function addHandlers(data) {
 
     data.el.fileButton.addEventListener("click", () => data.el.filePicker.click(), false);
     data.el.filePicker.addEventListener("change", () => handleUpload(data), false);
+
+    data.el.webcamButton.addEventListener(
+        "click", () => handleWebcam(data), false
+    );
 
     data.el.imgSource.addEventListener(
         "change", () => {pipeline({data:data, trigger:TRIGGERS.imgSource});}
@@ -299,6 +386,10 @@ function addHandlers(data) {
 
     data.el.zoom.addEventListener(
         "change", () => {pipeline({data:data, trigger:TRIGGERS.zoom});}
+    );
+
+    data.el.specAxes.addEventListener(
+        "change", () => {handleSpecAxesChange(data);}, false
     );
 
     for (let el of [data.el.lowPassCutoff, data.el.highPassCutoff]) {
@@ -339,6 +430,17 @@ function addHandlers(data) {
 }
 
 
+function handleSpecAxesChange(data) {
+
+    let newAxes = data.el.specAxes.value;
+
+    data.el.zoom.disabled = (newAxes === "Log-polar");
+
+    pipeline({data: data, trigger: TRIGGERS.axesChange});
+
+}
+
+
 function calcFFT(data) {
 
     data.fRealND = SCI.scratch.clone(data.lumWindowedND);
@@ -350,19 +452,41 @@ function calcFFT(data) {
 
     data.fAbsShiftedND = fftshift(data.fAbsND);
 
+    SCI.toPolar(data.fAbsPolarND, data.fAbsShiftedND);
+
+    data.fAbsPolarND = data.fAbsPolarND.transpose(1, 0);
+
+    data.fSFAmpArray = calcColumnMean(data.fAbsPolarND);
+
 }
 
 function setFFTOutput(data) {
 
-    let zoomFactor = Number(data.el.zoom.value[0]);
+    let displayImage;
 
-    let absFreqImage = arrayToImageData(
-        SCI.scratch.clone(data.fAbsShiftedND),
-        {normalise: true, toSRGB: true, toLightness: true, zoomFactor: zoomFactor},
-    );
+    if (data.el.specAxes.value === "Cartesian") {
+
+        let zoomFactor = Number(data.el.zoom.value[0]);
+
+        displayImage = arrayToImageData(
+            SCI.scratch.clone(data.fAbsShiftedND),
+            {normalise: true, toSRGB: true, toLightness: true, zoomFactor: zoomFactor},
+        );
+
+    }
+    else {
+
+        displayImage = arrayToImageData(
+            SCI.scratch.clone(data.fAbsPolarND),
+            {normalise: true, toSRGB: true, toLightness: true},
+        );
+
+        // convert the SF means into pixels
+
+    }
 
     data.el.context.amp.putImageData(
-        absFreqImage,
+        displayImage,
         0,
         0,
     );
@@ -383,19 +507,35 @@ function setFilter(data) {
 
     data.filterND = fftshift(data.filterShiftedND);
 
+    SCI.toPolar(data.filterPolarND, data.filterShiftedND);
+
+    data.filterPolarND = data.filterPolarND.transpose(1, 0);
+
 }
 
 function setFilterOutput(data) {
 
-    let zoomFactor = Number(data.el.zoom.value[0]);
+    let displayImage;
 
-    let filterImage = arrayToImageData(
-        SCI.scratch.clone(data.filterShiftedND),
-        {normalise: false, toSRGB: false, toLightness: false, zoomFactor: zoomFactor},
-    );
+    if (data.el.specAxes.value === "Cartesian") {
+
+        let zoomFactor = Number(data.el.zoom.value[0]);
+
+        displayImage = arrayToImageData(
+            SCI.scratch.clone(data.filterShiftedND),
+            {normalise: false, toSRGB: false, toLightness: false, zoomFactor: zoomFactor},
+        );
+
+    }
+    else {
+        displayImage = arrayToImageData(
+            SCI.scratch.clone(data.filterPolarND),
+            {normalise: false, toSRGB: false, toLightness: false},
+        );
+    }
 
     data.el.context.filter.putImageData(
-        filterImage,
+        displayImage,
         0,
         0,
     );
@@ -572,6 +712,23 @@ function normaliseArray(array, oldMin, oldMax, newMin = 0, newMax = 1) {
 
 }
 
+const calcColumnMean = SCI.cwise(
+    {
+        args: ["array", "shape", "index"],
+        pre: function () {
+            this.mean = null;
+        },
+        body: function (array, shape, index) {
+            if (this.mean === null) {
+                this.mean = new Float64Array(shape[1]);
+            }
+            this.mean[index[1]] += array / shape[1];
+        },
+        post: function () {
+            return this.mean;
+        },
+    }
+);
 
 function clip(array, min, max) {
 
