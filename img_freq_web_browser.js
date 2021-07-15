@@ -21,6 +21,7 @@ const TRIGGERS = {
     filtUpdate: 4,
     filtSet: 5,
     axesChange: 6,
+    sfPlot: 7,
 };
 
 
@@ -67,6 +68,10 @@ async function pipeline({data, trigger} = {}) {
     if (trigger === TRIGGERS.axesChange) {
         setFFTOutput(data);
         setFilterOutput(data);
+    }
+
+    if (trigger === TRIGGERS.sfPlot) {
+        setFFTOutput(data);
     }
 
     return data;
@@ -318,6 +323,12 @@ async function initialiseData() {
         data.el.context[canvasName] = canvas.getContext("2d");
     }
 
+    data.el.context.amp.lineWidth = 2;
+    data.el.context.amp.strokeStyle = "orange";
+
+    // relative maximum for the SF amplitude line plot
+    data.ampMeanMax = 0.75
+
     data.el.imgSource = document.getElementById("inputImageSelect");
     data.el.zoom = document.getElementById("specZoom");
     data.el.applyWindow = document.getElementById("windowingActive");
@@ -327,6 +338,7 @@ async function initialiseData() {
     data.el.fileButton = document.getElementById("fileButton");
     data.el.webcamButton = document.getElementById("webcamButton");
     data.el.specAxes = document.getElementById("specAxes");
+    data.el.sfPlotActive = document.getElementById("sfPlotActive");
 
     data.el.video = document.createElement("video");
 
@@ -378,16 +390,20 @@ function addHandlers(data) {
     );
 
     data.el.imgSource.addEventListener(
-        "change", () => {pipeline({data:data, trigger:TRIGGERS.imgSource});}
+        "change", () => {pipeline({data: data, trigger: TRIGGERS.imgSource});}
     );
 
     data.el.applyWindow.addEventListener(
-        "change", () => {pipeline({data:data, trigger:TRIGGERS.imgWindow});}
+        "change", () => {pipeline({data: data, trigger: TRIGGERS.imgWindow});}
     );
 
     data.el.zoom.addEventListener(
-        "change", () => {pipeline({data:data, trigger:TRIGGERS.zoom});}
+        "change", () => {pipeline({data: data, trigger: TRIGGERS.zoom});}
     );
+
+    data.el.sfPlotActive.addEventListener(
+        "change", () => {pipeline({data: data, trigger: TRIGGERS.sfPlot});}
+    )
 
     data.el.specAxes.addEventListener(
         "change", () => {handleSpecAxesChange(data);}, false
@@ -437,6 +453,8 @@ function handleSpecAxesChange(data) {
 
     data.el.zoom.disabled = (newAxes === "Log-polar");
 
+    data.el.sfPlotActive.disabled = (newAxes === "Cartesian");
+
     pipeline({data: data, trigger: TRIGGERS.axesChange});
 
 }
@@ -481,6 +499,13 @@ function setFFTOutput(data) {
             SCI.scratch.clone(data.fAbsPolarND),
             {normalise: true, toSRGB: true, toLightness: true},
         );
+
+        if (data.el.sfPlotActive.checked) {
+            var logND = SCI.ndarray(data.fSFAmpArray.map(Math.log));
+            normaliseArray(logND);
+            SCI.ops.mulseq(logND, data.ampMeanMax);
+        }
+
     }
 
     data.el.context.amp.putImageData(
@@ -488,6 +513,22 @@ function setFFTOutput(data) {
         0,
         0,
     );
+
+    if (data.el.specAxes.value === "Log-polar" && data.el.sfPlotActive.checked) {
+
+        data.el.context.amp.beginPath();
+
+        data.el.context.amp.moveTo(0, data.imgSize - logND.get(0) * data.imgSize);
+
+        for (let iCol = 1; iCol < data.imgSize; iCol++) {
+            data.el.context.amp.lineTo(iCol, data.imgSize - logND.get(iCol) * data.imgSize);
+        }
+
+        data.el.context.amp.stroke();
+        data.el.context.amp.closePath();
+
+    }
+
 
 }
 
