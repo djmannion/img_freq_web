@@ -93,8 +93,8 @@ async function setImageSource(data) {
 
         const sourceFilenames = {
             "Dog (Joe)": "joe.jpg",
-            "Landscape": "landscape.jpg",
-            "Beach": "ocean.jpg",
+            Landscape: "landscape.jpg",
+            Beach: "ocean.jpg",
         };
 
         const imagePath = `img/${sourceFilenames[imageSource]}`;
@@ -132,7 +132,7 @@ async function setImageSource(data) {
     );
 
     // now to convert it into an RGB ndarray
-    let imgArray = (
+    const imgArray = (
         SCI.ndarray(
             new Float64Array(resizedImage.data),
             [data.imgSize, data.imgSize, 4]
@@ -152,7 +152,7 @@ async function setImageSource(data) {
 
 function setImageWindow(data) {
 
-    let applyWindow = data.el.applyWindow.checked;
+    const applyWindow = data.el.applyWindow.checked;
 
     if (applyWindow) {
         data.lumWindowedND = blend(data.lumND, data.windowND);
@@ -166,7 +166,7 @@ function setImageWindow(data) {
 
 function setImageOutput(data) {
 
-    let presImage = arrayToImageData(
+    const presImage = arrayToImageData(
         SCI.scratch.clone(data.lumWindowedND),
         {normalise: false, toSRGB: true, toLightness: false},
     );
@@ -215,19 +215,19 @@ async function handleWebcam(data) {
 
     data.el.video.pause();
 
-    for (let track of webcam.getTracks()) {
+    for (const track of webcam.getTracks()) {
         track.stop();
     }
 
     if (!alreadyWebcam) {
-        let webcamOption = document.createElement("option");
+        const webcamOption = document.createElement("option");
         webcamOption.value = "Webcam";
         webcamOption.innerText = "Webcam";
 
         data.el.imgSource.appendChild(webcamOption);
     }
 
-    for (let option of data.el.imgSource.options) {
+    for (const option of data.el.imgSource.options) {
         if (option.text === "Webcam") {
             option.selected = true;
             break;
@@ -236,7 +236,7 @@ async function handleWebcam(data) {
 
     data.webcamImg = data.el.video;
 
-    let imgSourceChange = new CustomEvent("change");
+    const imgSourceChange = new CustomEvent("change");
 
     data.el.imgSource.dispatchEvent(imgSourceChange);
 }
@@ -247,8 +247,8 @@ async function handleUpload(data) {
 
     const filePath = data.el.filePicker.files[0];
 
-    let imgSrc = await new Promise(
-        function (resolve, reject) {
+    const imgSrc = await new Promise(
+        function(resolve, reject) {
 
             const reader = new FileReader();
 
@@ -258,9 +258,9 @@ async function handleUpload(data) {
         }
     );
 
-    let img = await new Promise(
-        function (resolve) {
-            let imgElement = new Image();
+    const img = await new Promise(
+        function(resolve) {
+            const imgElement = new Image();
             imgElement.onload = () => resolve(imgElement);
             imgElement.src = imgSrc;
         }
@@ -269,21 +269,21 @@ async function handleUpload(data) {
     data.customImg = img;
 
     if (!alreadyCustom) {
-        let customOption = document.createElement("option");
+        const customOption = document.createElement("option");
         customOption.value = "Custom";
         customOption.innerText = "Custom";
 
         data.el.imgSource.appendChild(customOption);
     }
 
-    for (let option of data.el.imgSource.options) {
+    for (const option of data.el.imgSource.options) {
         if (option.text === "Custom") {
             option.selected = true;
             break;
         }
     }
 
-    let imgSourceChange = new CustomEvent("change");
+    const imgSourceChange = new CustomEvent("change");
 
     data.el.imgSource.dispatchEvent(imgSourceChange);
 
@@ -291,7 +291,7 @@ async function handleUpload(data) {
 
 async function initialiseData() {
 
-    let data = {};
+    const data = {};
 
     data.imgSize = 512;
     data.imgDim = [data.imgSize, data.imgSize];
@@ -318,7 +318,7 @@ async function initialiseData() {
 
     // contexts
     data.el.context = {};
-    for (let [canvasName, canvas] of Object.entries(data.el.canvas)) {
+    for (const [canvasName, canvas] of Object.entries(data.el.canvas)) {
         data.el.context[canvasName] = canvas.getContext("2d");
     }
 
@@ -408,7 +408,7 @@ function addHandlers(data) {
         "change", () => {handleSpecAxesChange(data);}, false
     );
 
-    for (let el of [data.el.lowPassCutoff, data.el.highPassCutoff]) {
+    for (const el of [data.el.lowPassCutoff, data.el.highPassCutoff]) {
         el.addEventListener("input", handleFilterCutoffChange);
         el.addEventListener("change", () => pipeline({data: data, trigger: TRIGGERS.filtSet}));
     }
@@ -421,14 +421,14 @@ function addHandlers(data) {
     function handleFilterCutoffChange(evt) {
 
         // "lowPass" or "highPass"
-        let activeFilterEnd = filterEndFromEvent(evt);
-        let otherFilterEnd = (activeFilterEnd === "low") ? "high" : "low";
+        const activeFilterEnd = filterEndFromEvent(evt);
+        const otherFilterEnd = (activeFilterEnd === "low") ? "high" : "low";
 
-        let activeFilterEl = data.el[activeFilterEnd + "PassCutoff"];
+        const activeFilterEl = data.el[activeFilterEnd + "PassCutoff"];
         let activeFilterCutoff = activeFilterEl.valueAsNumber;
 
-        let otherFilterEl = data.el[otherFilterEnd + "PassCutoff"];
-        let otherFilterCutoff = otherFilterEl.valueAsNumber;
+        const otherFilterEl = data.el[otherFilterEnd + "PassCutoff"];
+        const otherFilterCutoff = otherFilterEl.valueAsNumber;
 
         if (activeFilterEnd === "low" && activeFilterCutoff >= otherFilterCutoff) {
             activeFilterCutoff = otherFilterCutoff - 1;
@@ -448,7 +448,7 @@ function addHandlers(data) {
 
 function handleSpecAxesChange(data) {
 
-    let newAxes = data.el.specAxes.value;
+    const newAxes = data.el.specAxes.value;
 
     data.el.zoom.disabled = (newAxes === "Log-polar");
 
@@ -484,7 +484,7 @@ function setFFTOutput(data) {
 
     if (data.el.specAxes.value === "Cartesian") {
 
-        let zoomFactor = Number(data.el.zoom.value[0]);
+        const zoomFactor = Number(data.el.zoom.value[0]);
 
         displayImage = arrayToImageData(
             SCI.scratch.clone(data.fAbsShiftedND),
@@ -509,7 +509,7 @@ function setFFTOutput(data) {
 
     if (data.el.specAxes.value === "Log-polar" && data.el.sfPlotActive.checked) {
 
-        let logND = SCI.ndarray(data.fSFAmpArray.map(Math.log));
+        const logND = SCI.ndarray(data.fSFAmpArray.map(Math.log));
         normaliseArray(logND);
         SCI.ops.mulseq(logND, data.ampMeanMax);
 
@@ -533,8 +533,8 @@ function setFFTOutput(data) {
 
 function setFilter(data) {
 
-    let filterLowRaw = data.el.lowPassCutoff.valueAsNumber;
-    let filterHighRaw = data.el.highPassCutoff.valueAsNumber;
+    const filterLowRaw = data.el.lowPassCutoff.valueAsNumber;
+    const filterHighRaw = data.el.highPassCutoff.valueAsNumber;
 
     const exponent = 4;
 
@@ -557,7 +557,7 @@ function setFilterOutput(data) {
 
     if (data.el.specAxes.value === "Cartesian") {
 
-        let zoomFactor = Number(data.el.zoom.value[0]);
+        const zoomFactor = Number(data.el.zoom.value[0]);
 
         displayImage = arrayToImageData(
             SCI.scratch.clone(data.filterShiftedND),
@@ -582,8 +582,8 @@ function setFilterOutput(data) {
 
 function calcOutput(data) {
 
-    let oRealND = SCI.scratch.clone(data.fRealND);
-    let oImagND = SCI.scratch.clone(data.fImagND);
+    const oRealND = SCI.scratch.clone(data.fRealND);
+    const oImagND = SCI.scratch.clone(data.fImagND);
 
     SCI.ops.muleq(oRealND, data.filterND);
     SCI.ops.muleq(oImagND, data.filterND);
@@ -592,7 +592,7 @@ function calcOutput(data) {
 
     SCI.ops.addseq(oRealND, data.lumMean);
 
-    let outputImage = arrayToImageData(
+    const outputImage = arrayToImageData(
         oRealND,
         {normalise: false, toSRGB: true, toLightness: false},
     );
@@ -609,7 +609,7 @@ function calcOutput(data) {
 const prepFilter = SCI.cwise(
     {
         args: ["array", "array", "scalar", "scalar"],
-        body: function (filt, dist, inThresh, outThresh) {
+        body: function(filt, dist, inThresh, outThresh) {
             if (dist >= inThresh && dist <= outThresh) {
                 filt = 1;
             }
@@ -628,15 +628,14 @@ function calcMean(array) {
 
 function makeDistanceArray(imgSize) {
 
-    let distArray = SCI.zeros([imgSize, imgSize]);
+    const distArray = SCI.zeros([imgSize, imgSize]);
 
-    let halfSize = imgSize / 2;
+    const halfSize = imgSize / 2;
 
     for (let iRow = 0; iRow < imgSize; iRow++) {
         for (let iCol = 0; iCol < imgSize; iCol++) {
-            let dist = Math.sqrt(
-                Math.pow(iRow - halfSize, 2) +
-                Math.pow(iCol - halfSize, 2)
+            const dist = Math.sqrt(
+                Math.pow(iRow - halfSize, 2) + Math.pow(iCol - halfSize, 2)
             ) / halfSize;
             distArray.set(iRow, iCol, dist);
         }
@@ -648,17 +647,17 @@ function makeDistanceArray(imgSize) {
 
 
 function makeWindow(
-    {imgSize, innerProp = 0, outerProp = 1, winProp = 0.1, distArray} = {}
+    {imgSize, innerProp = 0, outerProp = 1, winProp = 0.1, distArray} = {},
 ) {
 
     distArray = distArray ?? makeDistanceArray(imgSize);
 
-    let winArray = SCI.zeros([imgSize, imgSize]);
+    const winArray = SCI.zeros([imgSize, imgSize]);
 
     for (let iRow = 0; iRow < imgSize; iRow++) {
         for (let iCol = 0; iCol < imgSize; iCol++) {
 
-            let dist = distArray.get(iRow, iCol);
+            const dist = distArray.get(iRow, iCol);
 
             if (dist < outerProp) {
                 winArray.set(iRow, iCol, 1);
@@ -674,7 +673,7 @@ function makeWindow(
 
 function fftshift(array) {
 
-    let outArray = SCI.zeros(array.shape);
+    const outArray = SCI.zeros(array.shape);
 
     const imgSize = array.shape[0];
 
@@ -710,12 +709,12 @@ function fftshift(array) {
 
 function blend(srcArray, winArray) {
 
-    let outputArray = SCI.zeros(srcArray.shape);
+    const outputArray = SCI.zeros(srcArray.shape);
 
     const _blend = SCI.cwise(
         {
             args: ["array", "array", "array"],
-            body: function (output, src, win) {
+            body: function(output, src, win) {
                 output = (src * win) + (0.5 * (1 - win));
             },
         },
@@ -736,7 +735,7 @@ function normaliseArray(array, oldMin, oldMax, newMin = 0, newMax = 1) {
     const _convert = SCI.cwise(
         {
             args: ["array", "scalar", "scalar", "scalar", "scalar"],
-            body: function (o, oldMin, oldMax, newMin, newMax) {
+            body: function(o, oldMin, oldMax, newMin, newMax) {
                 o = (
                     (
                         (o - oldMin) * (newMax - newMin)
@@ -753,19 +752,19 @@ function normaliseArray(array, oldMin, oldMax, newMin = 0, newMax = 1) {
 const calcColumnMean = SCI.cwise(
     {
         args: ["array", "shape", "index"],
-        pre: function () {
+        pre: function() {
             this.mean = null;
         },
-        body: function (array, shape, index) {
+        body: function(array, shape, index) {
             if (this.mean === null) {
                 this.mean = new Float64Array(shape[1]);
             }
             this.mean[index[1]] += array / shape[1];
         },
-        post: function () {
+        post: function() {
             return this.mean;
         },
-    }
+    },
 );
 
 function clip(array, min, max) {
@@ -773,14 +772,14 @@ function clip(array, min, max) {
     const _clip = SCI.cwise(
         {
             args: ["array", "scalar", "scalar"],
-            body: function (o, clipMin, clipMax) {
+            body: function(o, clipMin, clipMax) {
                 if (o < clipMin) {
                     o = clipMin;
                 }
                 else if (o > clipMax) {
                     o = clipMax;
                 }
-            }
+            },
         },
     );
 
@@ -795,7 +794,7 @@ function linearToLightness(img) {
     const _linearToLightness = SCI.cwise(
         {
             args: ["array"],
-            body: function (o) {
+            body: function(o) {
                 if (o <= 0.008856) {
                     o *= 903.3;
                 }
@@ -814,12 +813,12 @@ function linearToLightness(img) {
 function linearRGBtoLuminance(img) {
 
     // output array to fill
-    let outImage = SCI.zeros(img.shape.slice(0, 2));
+    const outImage = SCI.zeros(img.shape.slice(0, 2));
 
     const _linearRGBtoLuminance = SCI.cwise(
         {
             args: ["array", "array", "array", "array"],
-            body: function (o, r, g, b) {
+            body: function(o, r, g, b) {
                 o = 0.2126 * r + 0.7152 * g + 0.0722 * b;
             },
         },
@@ -841,7 +840,7 @@ function sRGBtoLinear(img) {
     const _sRGBtoLinear = SCI.cwise(
         {
             args: ["array"],
-            body: function (v) {
+            body: function(v) {
                 if (v <= 0.04045) {
                     v /= 12.92;
                 }
@@ -861,7 +860,7 @@ function linearTosRGB(img) {
     const _linearTosRGB = SCI.cwise(
         {
             args: ["array"],
-            body: function (v) {
+            body: function(v) {
                 if (v <= 0.0031308) {
                     v *= 12.92;
                 }
@@ -873,6 +872,7 @@ function linearTosRGB(img) {
     );
 
     return _linearTosRGB(img);
+
 }
 
 
@@ -898,19 +898,20 @@ function arrayToImageData(
         const iStart = halfImgSize - halfSrcSize;
         const iEnd = iStart + srcSize;
 
-        let subImgVec = new Float64Array(srcSize * srcSize);
+        const subImgVec = new Float64Array(srcSize * srcSize);
 
         let iSubImgVec = 0;
 
         for (let iRow = iStart; iRow < iEnd; iRow++) {
             for (let iCol = iStart; iCol < iEnd; iCol++) {
-                let imgVal = imgArray.get(iRow, iCol);
+                const imgVal = imgArray.get(iRow, iCol);
                 subImgVec[iSubImgVec] = imgVal;
                 iSubImgVec++;
             }
         }
 
         subImgArray = SCI.ndarray(subImgVec, [srcSize, srcSize]);
+
     }
     else {
         subImgArray = imgArray;
@@ -928,19 +929,19 @@ function arrayToImageData(
         linearTosRGB(subImgArray);
     }
 
-    let outputImage = new ImageData(imgSize, imgSize);
+    const outputImage = new ImageData(imgSize, imgSize);
 
     let iFlat = 0;
 
     for (let iRow = 0; iRow < imgSize; iRow++) {
 
-        let iSrcRow = needsZoom ? Math.floor(iRow / imgSize * srcSize) : iRow;
+        const iSrcRow = needsZoom ? Math.floor(iRow / imgSize * srcSize) : iRow;
 
         for (let iCol = 0; iCol < imgSize; iCol++) {
 
-            let iSrcCol = needsZoom ? Math.floor(iCol / imgSize * srcSize) : iCol;
+            const iSrcCol = needsZoom ? Math.floor(iCol / imgSize * srcSize) : iCol;
 
-            let imgVal = subImgArray.get(iSrcRow, iSrcCol) * 255;
+            const imgVal = subImgArray.get(iSrcRow, iSrcCol) * 255;
 
             for (let iRGB = 0; iRGB < 3; iRGB++) {
                 outputImage.data[iFlat] = imgVal;
