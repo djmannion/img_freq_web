@@ -2137,7 +2137,7 @@ function numberIsNaN (obj) {
 }
 
 }).call(this)}).call(this,require("buffer").Buffer)
-},{"base64-js":1,"buffer":3,"ieee754":11}],4:[function(require,module,exports){
+},{"base64-js":1,"buffer":3,"ieee754":12}],4:[function(require,module,exports){
 "use strict"
 
 var createThunk = require("./lib/thunk.js")
@@ -2608,7 +2608,7 @@ function generateCWiseOp(proc, typesig) {
 }
 module.exports = generateCWiseOp
 
-},{"uniq":18}],6:[function(require,module,exports){
+},{"uniq":25}],6:[function(require,module,exports){
 "use strict"
 
 // The function below is called when constructing a cwise function object, and does the following:
@@ -2894,7 +2894,7 @@ function preprocess(func) {
 
 module.exports = preprocess
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"esprima":10,"uniq":18}],8:[function(require,module,exports){
+},{"esprima":11,"uniq":25}],8:[function(require,module,exports){
 "use strict"
 
 var parse   = require("cwise-parser")
@@ -2932,6 +2932,8 @@ function createCWise(user_args) {
 module.exports = createCWise
 
 },{"cwise-compiler":4,"cwise-parser":7}],9:[function(require,module,exports){
+module.exports = require("cwise-compiler")
+},{"cwise-compiler":4}],10:[function(require,module,exports){
 "use strict"
 
 function dupe_array(count, value, i) {
@@ -2981,7 +2983,7 @@ function dupe(count, value) {
 }
 
 module.exports = dupe
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 /*
   Copyright (C) 2013 Ariya Hidayat <ariya.hidayat@gmail.com>
   Copyright (C) 2013 Thaddee Tyl <thaddee.tyl@gmail.com>
@@ -6755,7 +6757,7 @@ parseStatement: true, parseSourceElement: true */
 }));
 /* vim: set sw=4 ts=4 et tw=80 : */
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 /*! ieee754. BSD-3-Clause License. Feross Aboukhadijeh <https://feross.org/opensource> */
 exports.read = function (buffer, offset, isLE, mLen, nBytes) {
   var e, m
@@ -6842,7 +6844,7 @@ exports.write = function (buffer, value, offset, isLE, mLen, nBytes) {
   buffer[offset + i - d] |= s * 128
 }
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 "use strict"
 
 function iota(n) {
@@ -6854,7 +6856,7 @@ function iota(n) {
 }
 
 module.exports = iota
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 /*!
  * Determine if an object is a Buffer
  *
@@ -6877,7 +6879,558 @@ function isSlowBuffer (obj) {
   return typeof obj.readFloatLE === 'function' && typeof obj.slice === 'function' && isBuffer(obj.slice(0, 0))
 }
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
+"use strict"
+
+
+var ops = require("ndarray-ops")
+
+function add(out_r, out_i, a_r, a_i, b_r, b_i) {
+  ops.add(out_r, a_r, b_r)
+  ops.add(out_i, a_i, b_i)
+}
+exports.add = add
+
+function addeq(out_r, out_i, a_r, a_i) {
+  ops.addeq(out_r, a_r)
+  ops.addeq(out_i, a_i)
+}
+exports.addeq = addeq
+
+function adds(out_r, out_i, a_r, a_i, s_r, s_i) {
+  ops.adds(out_r, a_r, s_r)
+  ops.adds(out_r, a_i, s_i)
+}
+exports.adds = adds
+
+function addseq(out_r, out_i, s_r, s_i) {
+  ops.addseq(out_r, s_r)
+  ops.addseq(out_i, s_i)
+}
+exports.addseq = addseq
+
+function sub(out_r, out_i, a_r, a_i, b_r, b_i) {
+  ops.sub(out_r, a_r, b_r)
+  ops.sub(out_i, a_i, b_i)
+}
+exports.sub = sub
+
+function subeq(out_r, out_i, a_r, a_i) {
+  ops.subeq(out_r, a_r)
+  ops.subeq(out_i, a_i)
+}
+exports.subeq = subeq
+
+function subs(out_r, out_i, a_r, a_i, s_r, s_i) {
+  ops.subs(out_r, a_r, s_r)
+  ops.subs(out_i, a_i, s_i)
+}
+exports.subs = subs
+
+function subseq(out_r, out_i, s_r, s_i) {
+  ops.subseq(out_r, s_r)
+  ops.subseq(out_i, s_i)
+}
+exports.subseq = subseq
+
+function neg(out_r, out_i, a_r, a_i) {
+  ops.neg(out_r, a_r)
+  ops.neg(out_i, a_i)
+}
+exports.neg = neg
+
+function negeq(out_r, out_i) {
+  ops.negeq(out_r)
+  ops.negeq(out_i)
+}
+exports.negeq = negeq
+
+function conj(out_r, out_i, a_r, a_i) {
+  ops.assign(out_r, a_r)
+  ops.neg(out_i, a_i)
+}
+exports.conj = conj
+
+function conjeq(out_r, out_i) {
+  ops.negeq(out_i)
+}
+exports.conjeq = conjeq
+
+exports.mul = require('cwise/lib/wrapper')({"args":["array","array","array","array","array","array"],"pre":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"body":{"body":"{var _inline_1_i=_inline_1_arg2_,_inline_1_o=_inline_1_arg3_,_inline_1_t=_inline_1_arg4_,_inline_1_u=_inline_1_arg5_,_inline_1_X=_inline_1_t*(_inline_1_i+_inline_1_o);_inline_1_arg0_=_inline_1_X-_inline_1_o*(_inline_1_t+_inline_1_u),_inline_1_arg1_=_inline_1_X+_inline_1_i*(_inline_1_u-_inline_1_t)}","args":[{"name":"_inline_1_arg0_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_1_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_1_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_1_arg3_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_1_arg4_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_1_arg5_","lvalue":false,"rvalue":true,"count":1}],"thisVars":[],"localVars":["_inline_1_X","_inline_1_i","_inline_1_o","_inline_1_t","_inline_1_u"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cmul","blockSize":64})
+
+exports.muleq = require('cwise/lib/wrapper')({"args":["array","array","array","array"],"pre":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"body":{"body":"{var _inline_4_c=_inline_4_arg2_,_inline_4_f=_inline_4_arg3_,_inline_4_i=_inline_4_arg0_,_inline_4_o=_inline_4_arg1_,_inline_4_t=_inline_4_i*(_inline_4_c+_inline_4_f);_inline_4_arg0_=_inline_4_t-_inline_4_f*(_inline_4_i+_inline_4_o),_inline_4_arg1_=_inline_4_t+_inline_4_c*(_inline_4_o-_inline_4_i)}","args":[{"name":"_inline_4_arg0_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_4_arg1_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_4_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_4_arg3_","lvalue":false,"rvalue":true,"count":1}],"thisVars":[],"localVars":["_inline_4_c","_inline_4_f","_inline_4_i","_inline_4_o","_inline_4_t"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cmuleq","blockSize":64})
+
+exports.muls = require('cwise/lib/wrapper')({"args":["array","array","array","array","scalar","scalar"],"pre":{"body":"{this_u=_inline_6_arg4_+_inline_6_arg5_,this_v=_inline_6_arg5_-_inline_6_arg4_}","args":[{"name":"_inline_6_arg0_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_6_arg1_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_6_arg2_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_6_arg3_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_6_arg4_","lvalue":false,"rvalue":true,"count":2},{"name":"_inline_6_arg5_","lvalue":false,"rvalue":true,"count":2}],"thisVars":["this_u","this_v"],"localVars":[]},"body":{"body":"{var _inline_7_r=_inline_7_arg2_,_inline_7_s=_inline_7_arg3_,_inline_7_u=_inline_7_arg4_*(_inline_7_r+_inline_7_s);_inline_7_arg0_=_inline_7_u-_inline_7_s*this_u,_inline_7_arg1_=_inline_7_u+_inline_7_r*this_v}","args":[{"name":"_inline_7_arg0_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_7_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_7_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_7_arg3_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_7_arg4_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_7_arg5_","lvalue":false,"rvalue":false,"count":0}],"thisVars":["this_u","this_v"],"localVars":["_inline_7_r","_inline_7_s","_inline_7_u"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cmuls","blockSize":64})
+
+exports.mulseq = require('cwise/lib/wrapper')({"args":["array","array","scalar","scalar"],"pre":{"body":"{this_u=_inline_9_arg2_+_inline_9_arg3_,this_v=_inline_9_arg3_-_inline_9_arg2_}","args":[{"name":"_inline_9_arg0_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_9_arg1_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_9_arg2_","lvalue":false,"rvalue":true,"count":2},{"name":"_inline_9_arg3_","lvalue":false,"rvalue":true,"count":2}],"thisVars":["this_u","this_v"],"localVars":[]},"body":{"body":"{var _inline_10_h=_inline_10_arg0_,_inline_10_n=_inline_10_arg1_,_inline_10_r=_inline_10_arg2_*(_inline_10_h+_inline_10_n);_inline_10_arg0_=_inline_10_r-_inline_10_n*this_u,_inline_10_arg1_=_inline_10_r+_inline_10_h*this_v}","args":[{"name":"_inline_10_arg0_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_10_arg1_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_10_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_10_arg3_","lvalue":false,"rvalue":false,"count":0}],"thisVars":["this_u","this_v"],"localVars":["_inline_10_h","_inline_10_n","_inline_10_r"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cmulseq","blockSize":64})
+
+exports.div = require('cwise/lib/wrapper')({"args":["array","array","array","array","array","array"],"pre":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"body":{"body":"{var _inline_13_s,_inline_13_v,_inline_13_M=_inline_13_arg2_,_inline_13_c=_inline_13_arg3_,_inline_13_f=_inline_13_arg4_,_inline_13_i=_inline_13_arg5_;Math.abs(_inline_13_f)>=Math.abs(_inline_13_i)?(_inline_13_s=_inline_13_i/_inline_13_f,_inline_13_v=_inline_13_f+_inline_13_i*_inline_13_s,_inline_13_arg0_=(_inline_13_M+_inline_13_c*_inline_13_s)/_inline_13_v,_inline_13_arg1_=(_inline_13_c-_inline_13_M*_inline_13_s)/_inline_13_v):(_inline_13_s=_inline_13_f/_inline_13_i,_inline_13_v=_inline_13_f*_inline_13_s+_inline_13_i,_inline_13_arg0_=(_inline_13_M*_inline_13_s+_inline_13_c)/_inline_13_v,_inline_13_arg1_=(_inline_13_c*_inline_13_s-_inline_13_M)/_inline_13_v)}","args":[{"name":"_inline_13_arg0_","lvalue":true,"rvalue":false,"count":2},{"name":"_inline_13_arg1_","lvalue":true,"rvalue":false,"count":2},{"name":"_inline_13_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_13_arg3_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_13_arg4_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_13_arg5_","lvalue":false,"rvalue":true,"count":1}],"thisVars":[],"localVars":["_inline_13_M","_inline_13_c","_inline_13_f","_inline_13_i","_inline_13_s","_inline_13_v"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cdiv","blockSize":64})
+
+exports.diveq = require('cwise/lib/wrapper')({"args":["array","array","array","array"],"pre":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"body":{"body":"{var _inline_16_n,_inline_16_r,_inline_16_s=_inline_16_arg0_,_inline_16_v=_inline_16_arg1_,_inline_16_M=_inline_16_arg2_,_inline_16_c=_inline_16_arg3_;Math.abs(_inline_16_M)>=Math.abs(_inline_16_c)?(_inline_16_n=_inline_16_c/_inline_16_M,_inline_16_r=_inline_16_M+_inline_16_c*_inline_16_n,_inline_16_arg0_=(_inline_16_s+_inline_16_v*_inline_16_n)/_inline_16_r,_inline_16_arg1_=(_inline_16_v-_inline_16_s*_inline_16_n)/_inline_16_r):(_inline_16_n=_inline_16_M/_inline_16_c,_inline_16_r=_inline_16_M*_inline_16_n+_inline_16_c,_inline_16_arg0_=(_inline_16_s*_inline_16_n+_inline_16_v)/_inline_16_r,_inline_16_arg1_=(_inline_16_v*_inline_16_n-_inline_16_s)/_inline_16_r)}","args":[{"name":"_inline_16_arg0_","lvalue":true,"rvalue":true,"count":3},{"name":"_inline_16_arg1_","lvalue":true,"rvalue":true,"count":3},{"name":"_inline_16_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_16_arg3_","lvalue":false,"rvalue":true,"count":1}],"thisVars":[],"localVars":["_inline_16_M","_inline_16_c","_inline_16_n","_inline_16_r","_inline_16_s","_inline_16_v"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cdiveq","blockSize":64})
+
+exports.divs = require('cwise/lib/wrapper')({"args":["array","array","array","array","scalar","scalar"],"pre":{"body":"{var _inline_18_c=_inline_18_arg4_*_inline_18_arg4_+_inline_18_arg5_*_inline_18_arg5_;_inline_18_arg4_/=_inline_18_c,_inline_18_arg5_/=-_inline_18_c,this_c=_inline_18_arg4_,this_u=_inline_18_arg4_+_inline_18_arg5_,this_v=_inline_18_arg5_-_inline_18_arg4_}","args":[{"name":"_inline_18_arg0_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_18_arg1_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_18_arg2_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_18_arg3_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_18_arg4_","lvalue":true,"rvalue":true,"count":6},{"name":"_inline_18_arg5_","lvalue":true,"rvalue":true,"count":5}],"thisVars":["this_c","this_u","this_v"],"localVars":["_inline_18_c"]},"body":{"body":"{var _inline_19_c=_inline_19_arg2_,_inline_19_n=_inline_19_arg3_,_inline_19_r=this_c*(_inline_19_c+_inline_19_n);_inline_19_arg0_=_inline_19_r-_inline_19_n*this_u,_inline_19_arg1_=_inline_19_r+_inline_19_c*this_v}","args":[{"name":"_inline_19_arg0_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_19_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_19_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_19_arg3_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_19_arg4_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_19_arg5_","lvalue":false,"rvalue":false,"count":0}],"thisVars":["this_c","this_u","this_v"],"localVars":["_inline_19_c","_inline_19_n","_inline_19_r"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cdivs","blockSize":64})
+
+exports.divseq = require('cwise/lib/wrapper')({"args":["array","array","scalar","scalar"],"pre":{"body":"{var _inline_21_v=_inline_21_arg2_*_inline_21_arg2_+_inline_21_arg3_*_inline_21_arg3_;_inline_21_arg2_/=_inline_21_v,_inline_21_arg3_/=-_inline_21_v,this_c=_inline_21_arg2_,this_u=_inline_21_arg2_+_inline_21_arg3_,this_v=_inline_21_arg3_-_inline_21_arg2_}","args":[{"name":"_inline_21_arg0_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_21_arg1_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_21_arg2_","lvalue":true,"rvalue":true,"count":6},{"name":"_inline_21_arg3_","lvalue":true,"rvalue":true,"count":5}],"thisVars":["this_c","this_u","this_v"],"localVars":["_inline_21_v"]},"body":{"body":"{var _inline_22_v=_inline_22_arg0_,_inline_22_a=_inline_22_arg1_,_inline_22_c=this_c*(_inline_22_v+_inline_22_a);_inline_22_arg0_=_inline_22_c-_inline_22_a*this_u,_inline_22_arg1_=_inline_22_c+_inline_22_v*this_v}","args":[{"name":"_inline_22_arg0_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_22_arg1_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_22_arg2_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_22_arg3_","lvalue":false,"rvalue":false,"count":0}],"thisVars":["this_c","this_u","this_v"],"localVars":["_inline_22_a","_inline_22_c","_inline_22_v"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cdivseq","blockSize":64})
+
+exports.recip = require('cwise/lib/wrapper')({"args":["array","array","array","array"],"pre":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"body":{"body":"{var _inline_25_c=_inline_25_arg2_,_inline_25_f=_inline_25_arg3_,_inline_25_i=_inline_25_c*_inline_25_c+_inline_25_f*_inline_25_f;_inline_25_arg0_=_inline_25_c/_inline_25_i,_inline_25_arg1_=-_inline_25_f/_inline_25_i}","args":[{"name":"_inline_25_arg0_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_25_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_25_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_25_arg3_","lvalue":false,"rvalue":true,"count":1}],"thisVars":[],"localVars":["_inline_25_c","_inline_25_f","_inline_25_i"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"crecip","blockSize":64})
+
+exports.recipeq = require('cwise/lib/wrapper')({"args":["array","array"],"pre":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"body":{"body":"{var _inline_28_r=_inline_28_arg0_,_inline_28_v=_inline_28_arg1_,_inline_28_c=_inline_28_r*_inline_28_r+_inline_28_v*_inline_28_v;_inline_28_arg0_=_inline_28_r/_inline_28_c,_inline_28_arg1_=-_inline_28_v/_inline_28_c}","args":[{"name":"_inline_28_arg0_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_28_arg1_","lvalue":true,"rvalue":true,"count":2}],"thisVars":[],"localVars":["_inline_28_c","_inline_28_r","_inline_28_v"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"crecipeq","blockSize":64})
+
+exports.exp = require('cwise/lib/wrapper')({"args":["array","array","array","array"],"pre":{"body":"{this_exp=Math.exp,this_cos=Math.cos,this_sin=Math.sin}","args":[],"thisVars":["this_cos","this_exp","this_sin"],"localVars":[]},"body":{"body":"{var _inline_31_n=this_exp(_inline_31_arg2_);_inline_31_arg0_=_inline_31_n*this_cos(_inline_31_arg3_),_inline_31_arg1_=_inline_31_n*this_sin(_inline_31_arg3_)}","args":[{"name":"_inline_31_arg0_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_31_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_31_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_31_arg3_","lvalue":false,"rvalue":true,"count":2}],"thisVars":["this_cos","this_exp","this_sin"],"localVars":["_inline_31_n"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cexp","blockSize":64})
+
+exports.expeq = require('cwise/lib/wrapper')({"args":["array","array"],"pre":{"body":"{this_exp=Math.exp,this_cos=Math.cos,this_sin=Math.sin}","args":[],"thisVars":["this_cos","this_exp","this_sin"],"localVars":[]},"body":{"body":"{var _inline_34_t=this_exp(_inline_34_arg0_),_inline_34_h=_inline_34_out__ir;_inline_34_arg0_=_inline_34_t*this_cos(_inline_34_h),_inline_34_arg1_=_inline_34_t*this_sin(_inline_34_h)}","args":[{"name":"_inline_34_arg0_","lvalue":true,"rvalue":true,"count":2},{"name":"_inline_34_arg1_","lvalue":true,"rvalue":false,"count":1}],"thisVars":["this_cos","this_exp","this_sin"],"localVars":["_inline_34_h","_inline_34_out__ir","_inline_34_t"]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cexpeq","blockSize":64})
+
+exports.mag = require('cwise/lib/wrapper')({"args":["array","array","array"],"pre":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"body":{"body":"{_inline_37_arg0_=_inline_37_arg1_*_inline_37_arg1_+_inline_37_arg2_*_inline_37_arg2_}","args":[{"name":"_inline_37_arg0_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_37_arg1_","lvalue":false,"rvalue":true,"count":2},{"name":"_inline_37_arg2_","lvalue":false,"rvalue":true,"count":2}],"thisVars":[],"localVars":[]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cmag","blockSize":64})
+
+exports.abs = require('cwise/lib/wrapper')({"args":["array","array","array"],"pre":{"body":"{this_sqrt=Math.sqrt}","args":[],"thisVars":["this_sqrt"],"localVars":[]},"body":{"body":"{_inline_40_arg0_=this_sqrt(_inline_40_arg1_*_inline_40_arg1_+_inline_40_arg2_*_inline_40_arg2_)}","args":[{"name":"_inline_40_arg0_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_40_arg1_","lvalue":false,"rvalue":true,"count":2},{"name":"_inline_40_arg2_","lvalue":false,"rvalue":true,"count":2}],"thisVars":["this_sqrt"],"localVars":[]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"cabs","blockSize":64})
+
+//Same thing as atan2
+exports.arg = ops.atan2
+
+},{"cwise/lib/wrapper":9,"ndarray-ops":20}],16:[function(require,module,exports){
+'use strict'
+
+var ops = require('ndarray-ops')
+var ndarray = require('ndarray')
+var pool = require('typedarray-pool')
+var fftm = require('./lib/fft-matrix.js')
+
+function ndfft(dir, x, y) {
+  var shape = x.shape
+    , d = shape.length
+    , size = 1
+    , stride = new Array(d)
+    , pad = 0
+    , i, j
+  for(i=d-1; i>=0; --i) {
+    stride[i] = size
+    size *= shape[i]
+    pad = Math.max(pad, fftm.scratchMemory(shape[i]))
+    if(x.shape[i] !== y.shape[i]) {
+      throw new Error('Shape mismatch, real and imaginary arrays must have same size')
+    }
+  }
+  var buf_size = 4 * size + pad
+  var buffer
+  if( x.dtype === 'array' ||
+      x.dtype === 'float64' ||
+      x.dtype === 'custom' ) {
+    buffer = pool.mallocDouble(buf_size)
+  } else {
+    buffer = pool.mallocFloat(buf_size)
+  }
+  var x1 = ndarray(buffer, shape.slice(0), stride, 0)
+    , y1 = ndarray(buffer, shape.slice(0), stride.slice(0), size)
+    , x2 = ndarray(buffer, shape.slice(0), stride.slice(0), 2*size)
+    , y2 = ndarray(buffer, shape.slice(0), stride.slice(0), 3*size)
+    , tmp, n, s1, s2
+    , scratch_ptr = 4 * size
+  
+  //Copy into x1/y1
+  ops.assign(x1, x)
+  ops.assign(y1, y)
+  
+  for(i=d-1; i>=0; --i) {
+    fftm(dir, size/shape[i], shape[i], buffer, x1.offset, y1.offset, scratch_ptr)
+    if(i === 0) {
+      break
+    }
+    
+    //Compute new stride for x2/y2
+    n = 1
+    s1 = x2.stride
+    s2 = y2.stride
+    for(j=i-1; j<d; ++j) {
+      s2[j] = s1[j] = n
+      n *= shape[j]
+    }
+    for(j=i-2; j>=0; --j) {
+      s2[j] = s1[j] = n
+      n *= shape[j]
+    }
+    
+    //Transpose
+    ops.assign(x2, x1)
+    ops.assign(y2, y1)
+    
+    //Swap buffers
+    tmp = x1
+    x1 = x2
+    x2 = tmp
+    tmp = y1
+    y1 = y2
+    y2 = tmp
+  }
+  
+  //Copy result back into x
+  ops.assign(x, x1)
+  ops.assign(y, y1)
+  
+  pool.free(buffer)
+}
+
+module.exports = ndfft
+},{"./lib/fft-matrix.js":17,"ndarray":23,"ndarray-ops":20,"typedarray-pool":24}],17:[function(require,module,exports){
+var bits = require('bit-twiddle')
+
+function fft(dir, nrows, ncols, buffer, x_ptr, y_ptr, scratch_ptr) {
+  dir |= 0
+  nrows |= 0
+  ncols |= 0
+  x_ptr |= 0
+  y_ptr |= 0
+  if(bits.isPow2(ncols)) {
+    fftRadix2(dir, nrows, ncols, buffer, x_ptr, y_ptr)
+  } else {
+    fftBluestein(dir, nrows, ncols, buffer, x_ptr, y_ptr, scratch_ptr)
+  }
+}
+module.exports = fft
+
+function scratchMemory(n) {
+  if(bits.isPow2(n)) {
+    return 0
+  }
+  return 2 * n + 4 * bits.nextPow2(2*n + 1)
+}
+module.exports.scratchMemory = scratchMemory
+
+
+//Radix 2 FFT Adapted from Paul Bourke's C Implementation
+function fftRadix2(dir, nrows, ncols, buffer, x_ptr, y_ptr) {
+  dir |= 0
+  nrows |= 0
+  ncols |= 0
+  x_ptr |= 0
+  y_ptr |= 0
+  var nn,m,i,i1,j,k,i2,l,l1,l2
+  var c1,c2,t,t1,t2,u1,u2,z,row,a,b,c,d,k1,k2,k3
+  
+  // Calculate the number of points
+  nn = ncols
+  m = bits.log2(nn)
+  
+  for(row=0; row<nrows; ++row) {  
+    // Do the bit reversal
+    i2 = nn >> 1;
+    j = 0;
+    for(i=0;i<nn-1;i++) {
+      if(i < j) {
+        t = buffer[x_ptr+i]
+        buffer[x_ptr+i] = buffer[x_ptr+j]
+        buffer[x_ptr+j] = t
+        t = buffer[y_ptr+i]
+        buffer[y_ptr+i] = buffer[y_ptr+j]
+        buffer[y_ptr+j] = t
+      }
+      k = i2
+      while(k <= j) {
+        j -= k
+        k >>= 1
+      }
+      j += k
+    }
+    
+    // Compute the FFT
+    c1 = -1.0
+    c2 = 0.0
+    l2 = 1
+    for(l=0;l<m;l++) {
+      l1 = l2
+      l2 <<= 1
+      u1 = 1.0
+      u2 = 0.0
+      for(j=0;j<l1;j++) {
+        for(i=j;i<nn;i+=l2) {
+          i1 = i + l1
+          a = buffer[x_ptr+i1]
+          b = buffer[y_ptr+i1]
+          c = buffer[x_ptr+i]
+          d = buffer[y_ptr+i]
+          k1 = u1 * (a + b)
+          k2 = a * (u2 - u1)
+          k3 = b * (u1 + u2)
+          t1 = k1 - k3
+          t2 = k1 + k2
+          buffer[x_ptr+i1] = c - t1
+          buffer[y_ptr+i1] = d - t2
+          buffer[x_ptr+i] += t1
+          buffer[y_ptr+i] += t2
+        }
+        k1 = c1 * (u1 + u2)
+        k2 = u1 * (c2 - c1)
+        k3 = u2 * (c1 + c2)
+        u1 = k1 - k3
+        u2 = k1 + k2
+      }
+      c2 = Math.sqrt((1.0 - c1) / 2.0)
+      if(dir < 0) {
+        c2 = -c2
+      }
+      c1 = Math.sqrt((1.0 + c1) / 2.0)
+    }
+    
+    // Scaling for inverse transform
+    if(dir < 0) {
+      var scale_f = 1.0 / nn
+      for(i=0;i<nn;i++) {
+        buffer[x_ptr+i] *= scale_f
+        buffer[y_ptr+i] *= scale_f
+      }
+    }
+    
+    // Advance pointers
+    x_ptr += ncols
+    y_ptr += ncols
+  }
+}
+
+// Use Bluestein algorithm for npot FFTs
+// Scratch memory required:  2 * ncols + 4 * bits.nextPow2(2*ncols + 1)
+function fftBluestein(dir, nrows, ncols, buffer, x_ptr, y_ptr, scratch_ptr) {
+  dir |= 0
+  nrows |= 0
+  ncols |= 0
+  x_ptr |= 0
+  y_ptr |= 0
+  scratch_ptr |= 0
+
+  // Initialize tables
+  var m = bits.nextPow2(2 * ncols + 1)
+    , cos_ptr = scratch_ptr
+    , sin_ptr = cos_ptr + ncols
+    , xs_ptr  = sin_ptr + ncols
+    , ys_ptr  = xs_ptr  + m
+    , cft_ptr = ys_ptr  + m
+    , sft_ptr = cft_ptr + m
+    , w = -dir * Math.PI / ncols
+    , row, a, b, c, d, k1, k2, k3
+    , i
+  for(i=0; i<ncols; ++i) {
+    a = w * ((i * i) % (ncols * 2))
+    c = Math.cos(a)
+    d = Math.sin(a)
+    buffer[cft_ptr+(m-i)] = buffer[cft_ptr+i] = buffer[cos_ptr+i] = c
+    buffer[sft_ptr+(m-i)] = buffer[sft_ptr+i] = buffer[sin_ptr+i] = d
+  }
+  for(i=ncols; i<=m-ncols; ++i) {
+    buffer[cft_ptr+i] = 0.0
+  }
+  for(i=ncols; i<=m-ncols; ++i) {
+    buffer[sft_ptr+i] = 0.0
+  }
+
+  fftRadix2(1, 1, m, buffer, cft_ptr, sft_ptr)
+  
+  //Compute scale factor
+  if(dir < 0) {
+    w = 1.0 / ncols
+  } else {
+    w = 1.0
+  }
+  
+  //Handle direction
+  for(row=0; row<nrows; ++row) {
+  
+    // Copy row into scratch memory, multiply weights
+    for(i=0; i<ncols; ++i) {
+      a = buffer[x_ptr+i]
+      b = buffer[y_ptr+i]
+      c = buffer[cos_ptr+i]
+      d = -buffer[sin_ptr+i]
+      k1 = c * (a + b)
+      k2 = a * (d - c)
+      k3 = b * (c + d)
+      buffer[xs_ptr+i] = k1 - k3
+      buffer[ys_ptr+i] = k1 + k2
+    }
+    //Zero out the rest
+    for(i=ncols; i<m; ++i) {
+      buffer[xs_ptr+i] = 0.0
+    }
+    for(i=ncols; i<m; ++i) {
+      buffer[ys_ptr+i] = 0.0
+    }
+    
+    // FFT buffer
+    fftRadix2(1, 1, m, buffer, xs_ptr, ys_ptr)
+    
+    // Apply multiplier
+    for(i=0; i<m; ++i) {
+      a = buffer[xs_ptr+i]
+      b = buffer[ys_ptr+i]
+      c = buffer[cft_ptr+i]
+      d = buffer[sft_ptr+i]
+      k1 = c * (a + b)
+      k2 = a * (d - c)
+      k3 = b * (c + d)
+      buffer[xs_ptr+i] = k1 - k3
+      buffer[ys_ptr+i] = k1 + k2
+    }
+    
+    // Inverse FFT buffer
+    fftRadix2(-1, 1, m, buffer, xs_ptr, ys_ptr)
+    
+    // Copy result back into x/y
+    for(i=0; i<ncols; ++i) {
+      a = buffer[xs_ptr+i]
+      b = buffer[ys_ptr+i]
+      c = buffer[cos_ptr+i]
+      d = -buffer[sin_ptr+i]
+      k1 = c * (a + b)
+      k2 = a * (d - c)
+      k3 = b * (c + d)
+      buffer[x_ptr+i] = w * (k1 - k3)
+      buffer[y_ptr+i] = w * (k1 + k2)
+    }
+    
+    x_ptr += ncols
+    y_ptr += ncols
+  }
+}
+
+},{"bit-twiddle":2}],18:[function(require,module,exports){
+"use strict"
+
+function interp1d(arr, x) {
+  var ix = Math.floor(x)
+    , fx = x - ix
+    , s0 = 0 <= ix   && ix   < arr.shape[0]
+    , s1 = 0 <= ix+1 && ix+1 < arr.shape[0]
+    , w0 = s0 ? +arr.get(ix)   : 0.0
+    , w1 = s1 ? +arr.get(ix+1) : 0.0
+  return (1.0-fx)*w0 + fx*w1
+}
+
+function interp2d(arr, x, y) {
+  var ix = Math.floor(x)
+    , fx = x - ix
+    , s0 = 0 <= ix   && ix   < arr.shape[0]
+    , s1 = 0 <= ix+1 && ix+1 < arr.shape[0]
+    , iy = Math.floor(y)
+    , fy = y - iy
+    , t0 = 0 <= iy   && iy   < arr.shape[1]
+    , t1 = 0 <= iy+1 && iy+1 < arr.shape[1]
+    , w00 = s0&&t0 ? arr.get(ix  ,iy  ) : 0.0
+    , w01 = s0&&t1 ? arr.get(ix  ,iy+1) : 0.0
+    , w10 = s1&&t0 ? arr.get(ix+1,iy  ) : 0.0
+    , w11 = s1&&t1 ? arr.get(ix+1,iy+1) : 0.0
+  return (1.0-fy) * ((1.0-fx)*w00 + fx*w10) + fy * ((1.0-fx)*w01 + fx*w11)
+}
+
+function interp3d(arr, x, y, z) {
+  var ix = Math.floor(x)
+    , fx = x - ix
+    , s0 = 0 <= ix   && ix   < arr.shape[0]
+    , s1 = 0 <= ix+1 && ix+1 < arr.shape[0]
+    , iy = Math.floor(y)
+    , fy = y - iy
+    , t0 = 0 <= iy   && iy   < arr.shape[1]
+    , t1 = 0 <= iy+1 && iy+1 < arr.shape[1]
+    , iz = Math.floor(z)
+    , fz = z - iz
+    , u0 = 0 <= iz   && iz   < arr.shape[2]
+    , u1 = 0 <= iz+1 && iz+1 < arr.shape[2]
+    , w000 = s0&&t0&&u0 ? arr.get(ix,iy,iz)       : 0.0
+    , w010 = s0&&t1&&u0 ? arr.get(ix,iy+1,iz)     : 0.0
+    , w100 = s1&&t0&&u0 ? arr.get(ix+1,iy,iz)     : 0.0
+    , w110 = s1&&t1&&u0 ? arr.get(ix+1,iy+1,iz)   : 0.0
+    , w001 = s0&&t0&&u1 ? arr.get(ix,iy,iz+1)     : 0.0
+    , w011 = s0&&t1&&u1 ? arr.get(ix,iy+1,iz+1)   : 0.0
+    , w101 = s1&&t0&&u1 ? arr.get(ix+1,iy,iz+1)   : 0.0
+    , w111 = s1&&t1&&u1 ? arr.get(ix+1,iy+1,iz+1) : 0.0
+  return (1.0-fz) * ((1.0-fy) * ((1.0-fx)*w000 + fx*w100) + fy * ((1.0-fx)*w010 + fx*w110)) + fz * ((1.0-fy) * ((1.0-fx)*w001 + fx*w101) + fy * ((1.0-fx)*w011 + fx*w111))
+}
+
+function interpNd(arr) {
+  var d = arr.shape.length|0
+    , ix = new Array(d)
+    , fx = new Array(d)
+    , s0 = new Array(d)
+    , s1 = new Array(d)
+    , i, t
+  for(i=0; i<d; ++i) {
+    t = +arguments[i+1]
+    ix[i] = Math.floor(t)
+    fx[i] = t - ix[i]
+    s0[i] = (0 <= ix[i]   && ix[i]   < arr.shape[i])
+    s1[i] = (0 <= ix[i]+1 && ix[i]+1 < arr.shape[i])
+  }
+  var r = 0.0, j, w, idx
+i_loop:
+  for(i=0; i<(1<<d); ++i) {
+    w = 1.0
+    idx = arr.offset
+    for(j=0; j<d; ++j) {
+      if(i & (1<<j)) {
+        if(!s1[j]) {
+          continue i_loop
+        }
+        w *= fx[j]
+        idx += arr.stride[j] * (ix[j] + 1)
+      } else {
+        if(!s0[j]) {
+          continue i_loop
+        }
+        w *= 1.0 - fx[j]
+        idx += arr.stride[j] * ix[j]
+      }
+    }
+    r += w * arr.data[idx]
+  }
+  return r
+}
+
+function interpolate(arr, x, y, z) {
+  switch(arr.shape.length) {
+    case 0:
+      return 0.0
+    case 1:
+      return interp1d(arr, x)
+    case 2:
+      return interp2d(arr, x, y)
+    case 3:
+      return interp3d(arr, x, y, z)
+    default:
+      return interpNd.apply(undefined, arguments)
+  }
+}
+module.exports = interpolate
+module.exports.d1 = interp1d
+module.exports.d2 = interp2d
+module.exports.d3 = interp3d
+
+},{}],19:[function(require,module,exports){
+'use strict'
+
+module.exports = toPolar
+
+var ops = require('ndarray-ops')
+var warp = require('ndarray-warp')
+
+function toPolar(polar, rect, center) {
+  var ntheta = polar.shape[0]
+  var nr     = polar.shape[1]
+  if(!center) {
+    center = [rect.shape[0]/2, rect.shape[1]/2]
+  }
+  var maxDiam = 0.0
+  for(var i=0; i<2; ++i) {
+    maxDiam += Math.pow(Math.max(center[0], rect.shape[0]-center[0]), 2)
+  }
+  maxDiam = Math.sqrt(maxDiam)
+  ops.assigns(polar, 0)
+
+  warp(polar, rect, function(out, inp) {
+    var t = inp[1] / ntheta * Math.PI * 2.0
+    var r = Math.exp(Math.log(maxDiam) * inp[0] / nr)
+    out[0] = r * Math.cos(t) + center[0]
+    out[1] = r * Math.sin(t) + center[1]
+  })
+
+  return polar
+}
+},{"ndarray-ops":20,"ndarray-warp":22}],20:[function(require,module,exports){
 "use strict"
 
 var compile = require("cwise-compiler")
@@ -7340,7 +7893,7 @@ exports.equals = compile({
 
 
 
-},{"cwise-compiler":4}],15:[function(require,module,exports){
+},{"cwise-compiler":4}],21:[function(require,module,exports){
 "use strict"
 
 var ndarray = require("ndarray")
@@ -7448,7 +8001,39 @@ function eye(shape, dtype) {
 }
 exports.eye = eye
 
-},{"ndarray":16,"ndarray-ops":14,"typedarray-pool":17}],16:[function(require,module,exports){
+},{"ndarray":23,"ndarray-ops":20,"typedarray-pool":24}],22:[function(require,module,exports){
+'use strict'
+
+var interp  = require('ndarray-linear-interpolate')
+
+
+var do_warp = require('cwise/lib/wrapper')({"args":["index","array","scalar","scalar","scalar"],"pre":{"body":"{this_warped=new Array(_inline_42_arg4_)}","args":[{"name":"_inline_42_arg0_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_42_arg1_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_42_arg2_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_42_arg3_","lvalue":false,"rvalue":false,"count":0},{"name":"_inline_42_arg4_","lvalue":false,"rvalue":true,"count":1}],"thisVars":["this_warped"],"localVars":[]},"body":{"body":"{_inline_43_arg2_(this_warped,_inline_43_arg0_),_inline_43_arg1_=_inline_43_arg3_.apply(void 0,this_warped)}","args":[{"name":"_inline_43_arg0_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_43_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_43_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_43_arg3_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_43_arg4_","lvalue":false,"rvalue":false,"count":0}],"thisVars":["this_warped"],"localVars":[]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"warpND","blockSize":64})
+
+var do_warp_1 = require('cwise/lib/wrapper')({"args":["index","array","scalar","scalar","scalar"],"pre":{"body":"{this_warped=[0]}","args":[],"thisVars":["this_warped"],"localVars":[]},"body":{"body":"{_inline_46_arg2_(this_warped,_inline_46_arg0_),_inline_46_arg1_=_inline_46_arg3_(_inline_46_arg4_,this_warped[0])}","args":[{"name":"_inline_46_arg0_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_46_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_46_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_46_arg3_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_46_arg4_","lvalue":false,"rvalue":true,"count":1}],"thisVars":["this_warped"],"localVars":[]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"warp1D","blockSize":64})
+
+var do_warp_2 = require('cwise/lib/wrapper')({"args":["index","array","scalar","scalar","scalar"],"pre":{"body":"{this_warped=[0,0]}","args":[],"thisVars":["this_warped"],"localVars":[]},"body":{"body":"{_inline_49_arg2_(this_warped,_inline_49_arg0_),_inline_49_arg1_=_inline_49_arg3_(_inline_49_arg4_,this_warped[0],this_warped[1])}","args":[{"name":"_inline_49_arg0_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_49_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_49_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_49_arg3_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_49_arg4_","lvalue":false,"rvalue":true,"count":1}],"thisVars":["this_warped"],"localVars":[]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"warp2D","blockSize":64})
+
+var do_warp_3 = require('cwise/lib/wrapper')({"args":["index","array","scalar","scalar","scalar"],"pre":{"body":"{this_warped=[0,0,0]}","args":[],"thisVars":["this_warped"],"localVars":[]},"body":{"body":"{_inline_52_arg2_(this_warped,_inline_52_arg0_),_inline_52_arg1_=_inline_52_arg3_(_inline_52_arg4_,this_warped[0],this_warped[1],this_warped[2])}","args":[{"name":"_inline_52_arg0_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_52_arg1_","lvalue":true,"rvalue":false,"count":1},{"name":"_inline_52_arg2_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_52_arg3_","lvalue":false,"rvalue":true,"count":1},{"name":"_inline_52_arg4_","lvalue":false,"rvalue":true,"count":1}],"thisVars":["this_warped"],"localVars":[]},"post":{"body":"{}","args":[],"thisVars":[],"localVars":[]},"debug":false,"funcName":"warp3D","blockSize":64})
+
+module.exports = function warp(dest, src, func) {
+  switch(src.shape.length) {
+    case 1:
+      do_warp_1(dest, func, interp.d1, src)
+      break
+    case 2:
+      do_warp_2(dest, func, interp.d2, src)
+      break
+    case 3:
+      do_warp_3(dest, func, interp.d3, src)
+      break
+    default:
+      do_warp(dest, func, interp.bind(undefined, src), src.shape.length)
+      break
+  }
+  return dest
+}
+
+},{"cwise/lib/wrapper":9,"ndarray-linear-interpolate":18}],23:[function(require,module,exports){
 var iota = require("iota-array")
 var isBuffer = require("is-buffer")
 
@@ -7799,7 +8384,7 @@ function wrappedNDArrayCtor(data, shape, stride, offset) {
 
 module.exports = wrappedNDArrayCtor
 
-},{"iota-array":12,"is-buffer":13}],17:[function(require,module,exports){
+},{"iota-array":13,"is-buffer":14}],24:[function(require,module,exports){
 (function (global){(function (){
 'use strict'
 
@@ -8054,7 +8639,7 @@ exports.clearCache = function clearCache() {
 }
 
 }).call(this)}).call(this,typeof global !== "undefined" ? global : typeof self !== "undefined" ? self : typeof window !== "undefined" ? window : {})
-},{"bit-twiddle":2,"buffer":3,"dup":9}],18:[function(require,module,exports){
+},{"bit-twiddle":2,"buffer":3,"dup":10}],25:[function(require,module,exports){
 "use strict"
 
 function unique_pred(list, compare) {
@@ -8113,7 +8698,7 @@ function unique(list, compare, sorted) {
 
 module.exports = unique
 
-},{}],19:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 "use strict"
 
 var ndarray = require("ndarray")
@@ -8159,7 +8744,7 @@ module.exports = function zeros(shape, dtype) {
   return ndarray(new (dtypeToType(dtype))(sz), shape);
 }
 
-},{"ndarray":16}],20:[function(require,module,exports){
+},{"ndarray":23}],27:[function(require,module,exports){
 "use strict";
 
 async function handleTrigger({data, trigger} = {}) {
@@ -8168,9 +8753,112 @@ async function handleTrigger({data, trigger} = {}) {
 
 module.exports = handleTrigger;
 
-},{}],21:[function(require,module,exports){
-arguments[4][20][0].apply(exports,arguments)
-},{"dup":20}],22:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
+"use strict";
+
+const SCI = {
+    ndarray: require("ndarray"),
+    scratch: require("ndarray-scratch"),
+    zeros: require("zeros"),
+    fft: require("ndarray-fft"),
+    cops: require("ndarray-complex"),
+    toPolar: require("ndarray-log-polar"),
+};
+
+const TRIGGERS = require("./triggers");
+
+const UTILS = require("./utils");
+
+
+function handleTrigger({data, trigger} = {}) {
+
+    if (trigger <= TRIGGERS.imgWindow) {
+        calcFFT(data);
+        setFFTOutput(data);
+    }
+
+    if (trigger === TRIGGERS.axesChange || trigger === TRIGGERS.sfPlot) {
+        setFFTOutput(data);
+    }
+
+}
+
+
+function calcFFT(data) {
+
+    data.fRealND = SCI.scratch.clone(data.lumWindowedND);
+    data.fImagND = SCI.zeros(data.imgDim);
+
+    SCI.fft(+1, data.fRealND, data.fImagND);
+
+    SCI.cops.abs(data.fAbsND, data.fRealND, data.fImagND);
+
+    data.fAbsShiftedND = UTILS.calcFFTShift(data.fAbsND);
+
+    SCI.toPolar(data.fAbsPolarND, data.fAbsShiftedND);
+
+    data.fAbsPolarND = data.fAbsPolarND.transpose(1, 0);
+
+    data.fSFAmpArray = UTILS.calcColumnMean(data.fAbsPolarND);
+
+}
+
+function setFFTOutput(data) {
+
+    let displayImage;
+
+    if (data.el.specAxes.value === "Cartesian") {
+
+        const zoomFactor = Number(data.el.zoom.value[0]);
+
+        displayImage = UTILS.convertImageNDToImageData(
+            SCI.scratch.clone(data.fAbsShiftedND),
+            {normalise: true, toSRGB: true, toLightness: true, zoomFactor: zoomFactor},
+        );
+
+    }
+    else {
+
+        displayImage = UTILS.convertImageNDToImageData(
+            SCI.scratch.clone(data.fAbsPolarND),
+            {normalise: true, toSRGB: true, toLightness: true},
+        );
+
+    }
+
+    data.el.context.amp.putImageData(
+        displayImage,
+        0,
+        0,
+    );
+
+    if (data.el.specAxes.value === "Log-polar" && data.el.sfPlotActive.checked) {
+
+        const logND = SCI.ndarray(data.fSFAmpArray.map(Math.log));
+        UTILS.setNormaliseND(logND, {newMax: data.ampMeanMax});
+
+        data.el.context.amp.beginPath();
+
+        data.el.context.amp.moveTo(0, data.imgSize - logND.get(0) * data.imgSize);
+
+        for (let iCol = 1; iCol < data.imgSize; iCol++) {
+            data.el.context.amp.lineTo(
+                iCol,
+                data.imgSize - logND.get(iCol) * data.imgSize,
+            );
+        }
+
+        data.el.context.amp.stroke();
+        data.el.context.amp.closePath();
+
+    }
+
+}
+
+
+module.exports = handleTrigger;
+
+},{"./triggers":33,"./utils":35,"ndarray":23,"ndarray-complex":15,"ndarray-fft":16,"ndarray-log-polar":19,"ndarray-scratch":21,"zeros":26}],29:[function(require,module,exports){
 "use strict";
 
 const SCI = {
@@ -8194,7 +8882,7 @@ async function handleTrigger({data, trigger} = {}) {
     if (trigger <= TRIGGERS.imgWindow) {
         setImageWindow(data);
         setImageOutput(data);
-        //zeroCentreImage(data);
+        zeroCentreImage(data);
     }
 
 }
@@ -8312,9 +9000,20 @@ function setImageWindow(data) {
 
 }
 
+
+function zeroCentreImage(data) {
+
+    data.lumMean = UTILS.calcMean(data.lumWindowedND);
+
+    // centre the luminance array
+    SCI.ops.subseq(data.lumWindowedND, data.lumMean);
+
+}
+
+
 module.exports = handleTrigger;
 
-},{"./triggers":26,"./utils":28,"ndarray":16,"ndarray-ops":14,"ndarray-scratch":15,"zeros":19}],23:[function(require,module,exports){
+},{"./triggers":33,"./utils":35,"ndarray":23,"ndarray-ops":20,"ndarray-scratch":21,"zeros":26}],30:[function(require,module,exports){
 "use strict";
 
 // this defines a set of (semi-)ordered 'trigger' events
@@ -8517,9 +9216,9 @@ function addHandlers({data} = {}) {
 
 window.addEventListener("load", main);
 
-},{"./pipeline":25,"./triggers":26,"./userInput":27,"./utils":28,"zeros":19}],24:[function(require,module,exports){
-arguments[4][20][0].apply(exports,arguments)
-},{"dup":20}],25:[function(require,module,exports){
+},{"./pipeline":32,"./triggers":33,"./userInput":34,"./utils":35,"zeros":26}],31:[function(require,module,exports){
+arguments[4][27][0].apply(exports,arguments)
+},{"dup":27}],32:[function(require,module,exports){
 "use strict";
 
 // these are each responsible for responding to a 'trigger'
@@ -8536,15 +9235,15 @@ async function run({data, trigger} = {}) {
     data = data ?? {};
 
     // farm out
-    for (let handler of HANDLERS) {
-        handler({data: data, trigger: trigger});
+    for (const handler of HANDLERS) {
+        await handler({data: data, trigger: trigger});
     }
 
 }
 
 module.exports = {run: run};
 
-},{"./filter":20,"./freq":21,"./input":22,"./output":24}],26:[function(require,module,exports){
+},{"./filter":27,"./freq":28,"./input":29,"./output":31}],33:[function(require,module,exports){
 "use strict";
 
 const TRIGGERS = {
@@ -8561,7 +9260,7 @@ const TRIGGERS = {
 
 module.exports = TRIGGERS;
 
-},{}],27:[function(require,module,exports){
+},{}],34:[function(require,module,exports){
 "use strict";
 
 async function handleWebcam(data) {
@@ -8676,10 +9375,11 @@ module.exports = {
     handleWebcam: handleWebcam,
 };
 
-},{}],28:[function(require,module,exports){
+},{}],35:[function(require,module,exports){
 "use strict";
 
 const SCI = {
+    ndarray: require("ndarray"),
     zeros: require("zeros"),
     ops: require("ndarray-ops"),
     cwise: require("cwise"),
@@ -8885,6 +9585,67 @@ const setBlendND = SCI.cwise(
 );
 
 
+function calcMean(arrayND) {
+    return SCI.ops.sum(arrayND) / arrayND.size;
+}
+
+
+function calcFFTShift(arrayND) {
+
+    const outArrayND = SCI.zeros(arrayND.shape);
+
+    const imgSize = arrayND.shape[0];
+
+    const halfSize = imgSize / 2;
+
+    for (let iSrcRow = 0; iSrcRow < imgSize; iSrcRow++) {
+        for (let iSrcCol = 0; iSrcCol < imgSize; iSrcCol++) {
+
+            let iDstRow, iDstCol;
+
+            if (iSrcRow < halfSize) {
+                iDstRow = halfSize + iSrcRow;
+            }
+            else {
+                iDstRow = iSrcRow - halfSize;
+            }
+
+            if (iSrcCol < halfSize) {
+                iDstCol = halfSize + iSrcCol;
+            }
+            else {
+                iDstCol = iSrcCol - halfSize;
+            }
+
+            outArrayND.set(iDstRow, iDstCol, arrayND.get(iSrcRow, iSrcCol));
+
+        }
+    }
+
+    return outArrayND;
+
+}
+
+
+const calcColumnMean = SCI.cwise(
+    {
+        args: ["array", "shape", "index"],
+        pre: function() {
+            this.mean = null;
+        },
+        body: function(array, shape, index) {
+            if (this.mean === null) {
+                this.mean = new Float64Array(shape[1]);
+            }
+            this.mean[index[1]] += array / shape[1];
+        },
+        post: function() {
+            return this.mean;
+        },
+    },
+);
+
+
 module.exports = {
     setDistanceND: setDistanceND,
     setApertureND: setApertureND,
@@ -8892,7 +9653,11 @@ module.exports = {
     setLinearRGBToSRGB: setLinearRGBToSRGB,
     setSRGBToLinearRGB: setSRGBToLinearRGB,
     setBlendND: setBlendND,
+    setNormaliseND: setNormaliseND,
     convertImageNDToImageData: convertImageNDToImageData,
+    calcMean: calcMean,
+    calcColumnMean: calcColumnMean,
+    calcFFTShift: calcFFTShift,
 };
 
-},{"cwise":8,"ndarray-ops":14,"zeros":19}]},{},[23]);
+},{"cwise":8,"ndarray":23,"ndarray-ops":20,"zeros":26}]},{},[30]);

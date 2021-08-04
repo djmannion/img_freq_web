@@ -1,6 +1,7 @@
 "use strict";
 
 const SCI = {
+    ndarray: require("ndarray"),
     zeros: require("zeros"),
     ops: require("ndarray-ops"),
     cwise: require("cwise"),
@@ -211,6 +212,62 @@ function calcMean(arrayND) {
 }
 
 
+function calcFFTShift(arrayND) {
+
+    const outArrayND = SCI.zeros(arrayND.shape);
+
+    const imgSize = arrayND.shape[0];
+
+    const halfSize = imgSize / 2;
+
+    for (let iSrcRow = 0; iSrcRow < imgSize; iSrcRow++) {
+        for (let iSrcCol = 0; iSrcCol < imgSize; iSrcCol++) {
+
+            let iDstRow, iDstCol;
+
+            if (iSrcRow < halfSize) {
+                iDstRow = halfSize + iSrcRow;
+            }
+            else {
+                iDstRow = iSrcRow - halfSize;
+            }
+
+            if (iSrcCol < halfSize) {
+                iDstCol = halfSize + iSrcCol;
+            }
+            else {
+                iDstCol = iSrcCol - halfSize;
+            }
+
+            outArrayND.set(iDstRow, iDstCol, arrayND.get(iSrcRow, iSrcCol));
+
+        }
+    }
+
+    return outArrayND;
+
+}
+
+
+const calcColumnMean = SCI.cwise(
+    {
+        args: ["array", "shape", "index"],
+        pre: function() {
+            this.mean = null;
+        },
+        body: function(array, shape, index) {
+            if (this.mean === null) {
+                this.mean = new Float64Array(shape[1]);
+            }
+            this.mean[index[1]] += array / shape[1];
+        },
+        post: function() {
+            return this.mean;
+        },
+    },
+);
+
+
 module.exports = {
     setDistanceND: setDistanceND,
     setApertureND: setApertureND,
@@ -218,6 +275,9 @@ module.exports = {
     setLinearRGBToSRGB: setLinearRGBToSRGB,
     setSRGBToLinearRGB: setSRGBToLinearRGB,
     setBlendND: setBlendND,
+    setNormaliseND: setNormaliseND,
     convertImageNDToImageData: convertImageNDToImageData,
     calcMean: calcMean,
+    calcColumnMean: calcColumnMean,
+    calcFFTShift: calcFFTShift,
 };

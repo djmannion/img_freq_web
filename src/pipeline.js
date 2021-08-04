@@ -15,7 +15,7 @@ async function run({data, trigger} = {}) {
 
     // farm out
     for (const handler of HANDLERS) {
-        handler({data: data, trigger: trigger});
+        await handler({data: data, trigger: trigger});
     }
 
 }
