@@ -4,18 +4,24 @@ const SCI = {
     zeros: require("zeros"),
     ndarray: require("ndarray"),
     ops: require("ndarray-ops"),
+    scratch: require("ndarray-scratch"),
 };
-
-const PIPELINE = require("./pipeline");
 
 const TRIGGERS = require("./triggers");
 
 const UTILS = require("./utils");
 
+
 async function handleTrigger({data, trigger} = {}) {
 
     if (trigger <= TRIGGERS.imgSource) {
         await setImageSource(data);
+    }
+
+    if (trigger <= TRIGGERS.imgWindow) {
+        setImageWindow(data);
+        setImageOutput(data);
+        zeroCentreImage(data);
     }
 
 }
@@ -100,12 +106,46 @@ async function setImageSource(data) {
 
 function setImageOutput(data) {
 
-    const presImage = arrayToImageData(
+    const presImage = UTILS.convertImageNDToImageData(
         SCI.scratch.clone(data.lumWindowedND),
         {normalise: false, toSRGB: true, toLightness: false},
     );
 
     data.el.context.image.putImageData(presImage, 0, 0);
+
+}
+
+function setImageWindow(data) {
+
+    const applyWindow = data.el.applyWindow.checked;
+
+    if (applyWindow) {
+
+        const bgND = SCI.zeros(data.lumND.shape);
+
+        SCI.ops.addseq(bgND, 0.5);
+
+        UTILS.setBlendND(
+            data.lumWindowedND, // output
+            data.lumND, // src
+            bgND, // dst
+            data.apertureND, // alpha
+        );
+
+    }
+    else {
+        data.lumWindowedND = SCI.scratch.clone(data.lumND);
+    }
+
+}
+
+
+function zeroCentreImage(data) {
+
+    data.lumMean = UTILS.calcMean(data.lumWindowedND);
+
+    // centre the luminance array
+    SCI.ops.subseq(data.lumWindowedND, data.lumMean);
 
 }
 

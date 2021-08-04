@@ -17,6 +17,7 @@ const USERINPUT = require("./userInput");
 async function main() {
     const data = initialiseData();
     addHandlers({data: data});
+    PIPELINE.run({data: data, trigger: TRIGGERS.init});
 }
 
 function initialiseData() {
@@ -82,7 +83,7 @@ function initialiseData() {
     UTILS.setDistanceND(data.distND);
 
     data.apertureND = SCI.zeros(data.imgDim);
-    UTILS.setApertureND(data.apertureND, data.distND);
+    UTILS.setApertureND(data.apertureND, data.distND, 0, 1);
 
     // holds the real, imaginary, and abs data from the FFT
     // the 'shifted' version means that `fftshift` has been applied to it
