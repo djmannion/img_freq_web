@@ -48,7 +48,7 @@ async function setImageSource(data) {
     else {
 
         const sourceFilenames = {
-            "Dog (Joe)": "joe.jpg",
+            Dog: "dog.jpg",
             Landscape: "landscape.jpg",
             Beach: "ocean.jpg",
         };

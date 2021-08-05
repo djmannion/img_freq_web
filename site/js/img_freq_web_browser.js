@@ -8968,6 +8968,8 @@ async function setImageSource(data) {
 
     const imageSource = data.el.imgSource.value;
 
+    console.log(imageSource);
+
     let origImage;
     let width;
     let height;
@@ -8985,7 +8987,7 @@ async function setImageSource(data) {
     else {
 
         const sourceFilenames = {
-            "Dog (Joe)": "joe.jpg",
+            Dog: "dog.jpg",
             Landscape: "landscape.jpg",
             Beach: "ocean.jpg",
         };
