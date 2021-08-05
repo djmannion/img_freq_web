@@ -2,10 +2,17 @@
 
 This hosts the code and files for a website that allows for interactive exploration of image Fourier analysis.
 
+Contents:
+
+* [Demonstration](https://github.com/djmannion/img_freq_web#demonstration)
+* [Features](https://github.com/djmannion/img_freq_web#features)
+* [Current limitations](https://github.com/djmannion/img_freq_web#current-limitations)
+* [Hosting](https://github.com/djmannion/img_freq_web#hosting)
+* [Building](https://github.com/djmannion/img_freq_web#building)
+
 ## Demonstration
 
 A demonstration version is available on [this website](https://www.djmannion.net/img_freq_web).
-
 
 ## Features
 
