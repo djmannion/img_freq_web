@@ -8968,8 +8968,6 @@ async function setImageSource(data) {
 
     const imageSource = data.el.imgSource.value;
 
-    console.log(imageSource);
-
     let origImage;
     let width;
     let height;
