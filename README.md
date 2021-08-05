@@ -9,6 +9,7 @@ Contents:
 * [Current limitations](https://github.com/djmannion/img_freq_web#current-limitations)
 * [Hosting](https://github.com/djmannion/img_freq_web#hosting)
 * [Building](https://github.com/djmannion/img_freq_web#building)
+* [Author](https://github.com/djmannion/img_freq_web#author)
 
 ## Demonstration
 
@@ -16,6 +17,7 @@ A demonstration version is available on [this website](https://www.djmannion.net
 
 ## Features
 
+* All calculations performed entirely within the browser.
 * Input images can be uploaded or grabbed from a webcam.
 * Windowing can be applied to the input image.
 * Amplitude spectrum displayed on either log-polar or (zoomable) cartesian axes.
@@ -24,8 +26,8 @@ A demonstration version is available on [this website](https://www.djmannion.net
 
 ## Current limitations
 
-* Untested on Safari.
-* Hard edges on the window and filter need softening.
+* Untested on Safari and Edge.
+* Boundaries on the window and filter are hard rather than ramped.
 * No specific mobile device support.
 * Widget layout is relatively unstyled.
 * Page layout could be improved&mdash;ideally the key components would be visible without scrolling.
@@ -59,3 +61,11 @@ npm run lint
 ```bash
 npm run build
 ```
+
+# Author
+
+**Damien Mannion**
+
+* [Profile](https://github.com/djmannion)
+* [Email](mailto:damien@djmannion.net)
+* [Website](https://www.djmannion.net)
