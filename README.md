@@ -1,11 +1,25 @@
 # Interactive image Fourier analysis website
 
+This hosts the code and files for a website that allows for interactive exploration of image Fourier analysis.
+
+## Demonstration
+
+A demonstration version is available on [this website](https://www.djmannion.net/img_freq_web).
+
+
 ## Features
+
+* Input images can be uploaded or grabbed from a webcam.
+* Windowing can be applied to the input image.
+* Amplitude spectrum displayed on either log-polar or (zoomable) cartesian axes.
+* Optionally shows the spatial frequency slope.
+* Can set low-pass, high-pass, or band-pass filters and see the reconstructed output.
 
 ## Current limitations
 
+* Untested on Safari.
 * Hard edges on the window and filter need softening.
-* No particular mobile device support.
+* No specific mobile device support.
 * Widget layout is relatively unstyled.
 * Page layout could be improved&mdash;ideally the key components would be visible without scrolling.
 * No explanatory prose.
@@ -18,9 +32,22 @@ Copy the files in the `site` directory to a web server.
 
 ## Building
 
+If you would like to make any changes or fixes, the javascript will need to be re-compiled using [`node.js`](https://nodejs.org/).
+This is because the site uses functionality from the great set of [`scijs`](https://github.com/scijs) packages.
+
+### Install the necessary packages
+
 ```bash
-npm install
+npm ci
 ```
+
+### (Optionally) Run the linter
+
+```bash
+npm run lint
+```
+
+### Compile
 
 ```bash
 npm run build

@@ -9718,7 +9718,6 @@ const setClipND = SCI.cwise(
         body: function(o, clipMin, clipMax) {
             if (o < clipMin) {
                 o = clipMin;
-                console.log('clippin');
             }
             else if (o > clipMax) {
                 o = clipMax;
