@@ -26,9 +26,9 @@ A demonstration version is available on [this website](https://www.djmannion.net
 
 ## Current limitations
 
+* Doesn't work reliably on mobile devices (not sure why!).
 * Untested on Safari and Edge.
 * Boundaries on the window and filter are hard rather than ramped.
-* No specific mobile device support.
 * Widget layout is relatively unstyled.
 * Page layout could be improved&mdash;ideally the key components would be visible without scrolling.
 * No explanatory prose.

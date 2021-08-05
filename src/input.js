@@ -31,13 +31,19 @@ async function setImageSource(data) {
 
     const imageSource = data.el.imgSource.value;
 
-    let imageBlob;
+    let origImage;
+    let width;
+    let height;
 
     if (imageSource === "Custom") {
-        imageBlob = data.customImg;
+        origImage = data.customImg;
+        width = origImage.width;
+        height = origImage.height;
     }
     else if (imageSource === "Webcam") {
-        imageBlob = data.webcamImg;
+        origImage = data.webcamImg;
+        width = origImage.videoWidth;
+        height = origImage.videoHeight;
     }
     else {
 
@@ -49,27 +55,35 @@ async function setImageSource(data) {
 
         const imagePath = `img/${sourceFilenames[imageSource]}`;
 
-        imageBlob = await (await fetch(imagePath)).blob();
-    }
+        const imageBlob = await (await fetch(imagePath)).blob();
 
-    // we don't know the dimensions or anything yet, so we first create a temporary
-    // image bitmap so that we can get that info
-    const origImage = await createImageBitmap(imageBlob);
+        origImage = await new Promise(
+            function(resolve) {
+                const imgElement = new Image();
+                imgElement.onload = () => resolve(imgElement);
+                imgElement.src = URL.createObjectURL(imageBlob);
+            }
+        );
+
+        width = origImage.width;
+        height = origImage.height;
+    }
 
     // want to resize so that the smallest dimension is `imgSize`; the other
     // dimension can then be cropped
-    const minDim = Math.min(origImage.width, origImage.height);
 
-    const resizedWidth = origImage.width / minDim * data.imgSize;
-    const resizedHeight = origImage.height / minDim * data.imgSize;
+    const minDim = Math.min(width, height);
+
+    const resizedWidth = width / minDim * data.imgSize;
+    const resizedHeight = height / minDim * data.imgSize;
 
     // draw to the (invisible) canvas
     data.el.context.offscreen.drawImage(
         origImage,
         0,
         0,
-        origImage.width,
-        origImage.height,
+        width,
+        height,
         0,
         0,
         resizedWidth,

@@ -12,6 +12,7 @@ async function handleWebcam(data) {
         );
     }
     catch (err) {
+        console.log(err);
         return;
     }
 
@@ -22,12 +23,13 @@ async function handleWebcam(data) {
         }
     );
 
-    await new Promise(
-        (resolve) => {
-            data.el.video.addEventListener("play", resolve, {once: true});
-            data.el.video.play();
-        }
-    );
+    try {
+        await data.el.video.play();
+    }
+    catch(err) {
+        console.log(err);
+        return;
+    }
 
     data.el.video.pause();
 
