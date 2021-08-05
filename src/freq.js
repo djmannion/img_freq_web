@@ -21,7 +21,7 @@ function handleTrigger({data, trigger} = {}) {
         setFFTOutput(data);
     }
 
-    if (trigger === TRIGGERS.axesChange || trigger === TRIGGERS.sfPlot) {
+    if ([TRIGGERS.axesChange, TRIGGERS.sfPlot, TRIGGERS.zoom].includes(trigger)) {
         setFFTOutput(data);
     }
 

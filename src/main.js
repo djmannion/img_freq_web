@@ -83,7 +83,7 @@ function initialiseData() {
     UTILS.setDistanceND(data.distND);
 
     data.apertureND = SCI.zeros(data.imgDim);
-    UTILS.setApertureND(data.apertureND, data.distND, 0, 1);
+    UTILS.setApertureND(data.apertureND, data.distND, 0, 0.95);
 
     // holds the real, imaginary, and abs data from the FFT
     // the 'shifted' version means that `fftshift` has been applied to it

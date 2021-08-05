@@ -207,6 +207,21 @@ const setBlendND = SCI.cwise(
 );
 
 
+const setClipND = SCI.cwise(
+    {
+        args: ["array", "scalar", "scalar"],
+        body: function(o, clipMin, clipMax) {
+            if (o < clipMin) {
+                o = clipMin;
+            }
+            else if (o > clipMax) {
+                o = clipMax;
+            }
+        },
+    },
+);
+
+
 function calcMean(arrayND) {
     return SCI.ops.sum(arrayND) / arrayND.size;
 }
@@ -275,6 +290,7 @@ module.exports = {
     setLinearRGBToSRGB: setLinearRGBToSRGB,
     setSRGBToLinearRGB: setSRGBToLinearRGB,
     setBlendND: setBlendND,
+    setClipND: setClipND,
     setNormaliseND: setNormaliseND,
     convertImageNDToImageData: convertImageNDToImageData,
     calcMean: calcMean,

@@ -8747,13 +8747,89 @@ module.exports = function zeros(shape, dtype) {
 },{"ndarray":23}],27:[function(require,module,exports){
 "use strict";
 
+const SCI = {
+    toPolar: require("ndarray-log-polar"),
+    scratch: require("ndarray-scratch"),
+};
+
+const TRIGGERS = require("./triggers");
+
+const UTILS = require("./utils");
+
+
 async function handleTrigger({data, trigger} = {}) {
-    return;
+
+    if (trigger <= TRIGGERS.filtChange) {
+        setFilter(data);
+        setFilterOutput(data);
+    }
+
+    if (trigger === TRIGGERS.zoom || trigger === TRIGGERS.axesChange) {
+        setFilterOutput(data);
+    }
+
 }
+
+
+function setFilter(data) {
+
+    const filterLowRaw = data.el.lowPassCutoff.valueAsNumber;
+    const filterHighRaw = data.el.highPassCutoff.valueAsNumber;
+
+    const exponent = 4;
+
+    data.filterLow = Math.pow(filterLowRaw / 100, exponent);
+    data.filterHigh = Math.pow(filterHighRaw / 100, exponent) * 1.5;
+
+    UTILS.setApertureND(
+        data.filterShiftedND, // output
+        data.distND, // distance
+        data.filterLow, // inner
+        data.filterHigh, // outer
+    );
+
+    data.filterND = UTILS.calcFFTShift(data.filterShiftedND);
+
+    SCI.toPolar(data.filterPolarND, data.filterShiftedND);
+
+    data.filterPolarND = data.filterPolarND.transpose(1, 0);
+
+}
+
+
+function setFilterOutput(data) {
+
+    let displayImage;
+
+    if (data.el.specAxes.value === "Cartesian") {
+
+        const zoomFactor = Number(data.el.zoom.value[0]);
+
+        displayImage = UTILS.convertImageNDToImageData(
+            SCI.scratch.clone(data.filterShiftedND),
+            {normalise: false, toSRGB: false, toLightness: false, zoomFactor: zoomFactor},
+        );
+
+    }
+    else {
+        displayImage = UTILS.convertImageNDToImageData(
+            SCI.scratch.clone(data.filterPolarND),
+            {normalise: false, toSRGB: false, toLightness: false},
+        );
+    }
+
+    data.el.context.filter.putImageData(
+        displayImage,
+        0,
+        0,
+    );
+
+}
+
 
 module.exports = handleTrigger;
 
-},{}],28:[function(require,module,exports){
+},{"./triggers":33,"./utils":35,"ndarray-log-polar":19,"ndarray-scratch":21}],28:[function(require,module,exports){
 "use strict";
 
 const SCI = {
@@ -8777,7 +8853,7 @@ function handleTrigger({data, trigger} = {}) {
         setFFTOutput(data);
     }
 
-    if (trigger === TRIGGERS.axesChange || trigger === TRIGGERS.sfPlot) {
+    if ([TRIGGERS.axesChange, TRIGGERS.sfPlot, TRIGGERS.zoom].includes(trigger)) {
         setFFTOutput(data);
     }
 
@@ -9099,7 +9175,7 @@ function initialiseData() {
     UTILS.setDistanceND(data.distND);
 
     data.apertureND = SCI.zeros(data.imgDim);
-    UTILS.setApertureND(data.apertureND, data.distND, 0, 1);
+    UTILS.setApertureND(data.apertureND, data.distND, 0, 0.95);
 
     // holds the real, imaginary, and abs data from the FFT
     // the 'shifted' version means that `fftshift` has been applied to it
@@ -9217,8 +9293,59 @@ function addHandlers({data} = {}) {
 window.addEventListener("load", main);
 
 },{"./pipeline":32,"./triggers":33,"./userInput":34,"./utils":35,"zeros":26}],31:[function(require,module,exports){
-arguments[4][27][0].apply(exports,arguments)
-},{"dup":27}],32:[function(require,module,exports){
+"use strict";
+
+const SCI = {
+    scratch: require("ndarray-scratch"),
+    ops: require("ndarray-ops"),
+    fft: require("ndarray-fft"),
+};
+
+const TRIGGERS = require("./triggers");
+
+const UTILS = require("./utils");
+
+
+async function handleTrigger({data, trigger} = {}) {
+
+    if (trigger <= TRIGGERS.filtSet && trigger !== TRIGGERS.filtChange) {
+        calcOutput(data);
+    }
+
+}
+
+
+function calcOutput(data) {
+
+    const oRealND = SCI.scratch.clone(data.fRealND);
+    const oImagND = SCI.scratch.clone(data.fImagND);
+
+    SCI.ops.muleq(oRealND, data.filterND);
+    SCI.ops.muleq(oImagND, data.filterND);
+
+    SCI.fft(-1, oRealND, oImagND);
+
+    SCI.ops.addseq(oRealND, data.lumMean);
+
+    UTILS.setClipND(oRealND, 0, 1);
+
+    const outputImage = UTILS.convertImageNDToImageData(
+        oRealND,
+        {normalise: false, toSRGB: true, toLightness: false},
+    );
+
+    data.el.context.output.putImageData(
+        outputImage,
+        0,
+        0,
+    );
+
+}
+
+
+module.exports = handleTrigger;
+
+},{"./triggers":33,"./utils":35,"ndarray-fft":16,"ndarray-ops":20,"ndarray-scratch":21}],32:[function(require,module,exports){
 "use strict";
 
 // these are each responsible for responding to a 'trigger'
@@ -9585,6 +9712,22 @@ const setBlendND = SCI.cwise(
 );
 
 
+const setClipND = SCI.cwise(
+    {
+        args: ["array", "scalar", "scalar"],
+        body: function(o, clipMin, clipMax) {
+            if (o < clipMin) {
+                o = clipMin;
+                console.log('clippin');
+            }
+            else if (o > clipMax) {
+                o = clipMax;
+            }
+        },
+    },
+);
+
+
 function calcMean(arrayND) {
     return SCI.ops.sum(arrayND) / arrayND.size;
 }
@@ -9653,6 +9796,7 @@ module.exports = {
     setLinearRGBToSRGB: setLinearRGBToSRGB,
     setSRGBToLinearRGB: setSRGBToLinearRGB,
     setBlendND: setBlendND,
+    setClipND: setClipND,
     setNormaliseND: setNormaliseND,
     convertImageNDToImageData: convertImageNDToImageData,
     calcMean: calcMean,
