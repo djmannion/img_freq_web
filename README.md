@@ -1,6 +1,6 @@
 # Interactive image Fourier analysis website
 
-This hosts the code and files for a website that allows for interactive exploration of image Fourier analysis&mdash;potentially useful for teaching purposes.
+This hosts the code and files for a website that allows for interactive exploration of image Fourier analysis&mdash;potentially useful for teaching.
 
 Contents:
 
