@@ -26,7 +26,7 @@ async function handleWebcam(data) {
     try {
         await data.el.video.play();
     }
-    catch(err) {
+    catch (err) {
         console.log(err);
         return;
     }

@@ -12,6 +12,7 @@ const SCI = {
 const UTILS = require("./utils");
 
 const USERINPUT = require("./userInput");
+const USEROUTPUT = require("./userOutput");
 
 
 async function main() {
@@ -69,6 +70,7 @@ function initialiseData() {
     data.el.webcamButton = document.getElementById("webcamButton");
     data.el.specAxes = document.getElementById("specAxes");
     data.el.sfPlotActive = document.getElementById("sfPlotActive");
+    data.el.exportButton = document.getElementById("exportButton");
 
     data.el.video = document.createElement("video");
 
@@ -120,6 +122,10 @@ function addHandlers({data} = {}) {
 
     data.el.webcamButton.addEventListener(
         "click", () => USERINPUT.handleWebcam(data), false
+    );
+
+    data.el.exportButton.addEventListener(
+        "click", () => USEROUTPUT.exportOutput(data), false
     );
 
     data.el.imgSource.addEventListener(

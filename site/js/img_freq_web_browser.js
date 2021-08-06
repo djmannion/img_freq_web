@@ -8829,7 +8829,7 @@ function setFilterOutput(data) {
 
 module.exports = handleTrigger;
 
-},{"./triggers":33,"./utils":35,"ndarray-log-polar":19,"ndarray-scratch":21}],28:[function(require,module,exports){
+},{"./triggers":33,"./utils":36,"ndarray-log-polar":19,"ndarray-scratch":21}],28:[function(require,module,exports){
 "use strict";
 
 const SCI = {
@@ -8934,7 +8934,7 @@ function setFFTOutput(data) {
 
 module.exports = handleTrigger;
 
-},{"./triggers":33,"./utils":35,"ndarray":23,"ndarray-complex":15,"ndarray-fft":16,"ndarray-log-polar":19,"ndarray-scratch":21,"zeros":26}],29:[function(require,module,exports){
+},{"./triggers":33,"./utils":36,"ndarray":23,"ndarray-complex":15,"ndarray-fft":16,"ndarray-log-polar":19,"ndarray-scratch":21,"zeros":26}],29:[function(require,module,exports){
 "use strict";
 
 const SCI = {
@@ -9103,7 +9103,7 @@ function zeroCentreImage(data) {
 
 module.exports = handleTrigger;
 
-},{"./triggers":33,"./utils":35,"ndarray":23,"ndarray-ops":20,"ndarray-scratch":21,"zeros":26}],30:[function(require,module,exports){
+},{"./triggers":33,"./utils":36,"ndarray":23,"ndarray-ops":20,"ndarray-scratch":21,"zeros":26}],30:[function(require,module,exports){
 "use strict";
 
 // this defines a set of (semi-)ordered 'trigger' events
@@ -9118,6 +9118,7 @@ const SCI = {
 const UTILS = require("./utils");
 
 const USERINPUT = require("./userInput");
+const USEROUTPUT = require("./userOutput");
 
 
 async function main() {
@@ -9175,6 +9176,7 @@ function initialiseData() {
     data.el.webcamButton = document.getElementById("webcamButton");
     data.el.specAxes = document.getElementById("specAxes");
     data.el.sfPlotActive = document.getElementById("sfPlotActive");
+    data.el.exportButton = document.getElementById("exportButton");
 
     data.el.video = document.createElement("video");
 
@@ -9226,6 +9228,10 @@ function addHandlers({data} = {}) {
 
     data.el.webcamButton.addEventListener(
         "click", () => USERINPUT.handleWebcam(data), false
+    );
+
+    data.el.exportButton.addEventListener(
+        "click", () => USEROUTPUT.exportOutput(data), false
     );
 
     data.el.imgSource.addEventListener(
@@ -9306,7 +9312,7 @@ function addHandlers({data} = {}) {
 
 window.addEventListener("load", main);
 
-},{"./pipeline":32,"./triggers":33,"./userInput":34,"./utils":35,"zeros":26}],31:[function(require,module,exports){
+},{"./pipeline":32,"./triggers":33,"./userInput":34,"./userOutput":35,"./utils":36,"zeros":26}],31:[function(require,module,exports){
 "use strict";
 
 const SCI = {
@@ -9359,7 +9365,7 @@ function calcOutput(data) {
 
 module.exports = handleTrigger;
 
-},{"./triggers":33,"./utils":35,"ndarray-fft":16,"ndarray-ops":20,"ndarray-scratch":21}],32:[function(require,module,exports){
+},{"./triggers":33,"./utils":36,"ndarray-fft":16,"ndarray-ops":20,"ndarray-scratch":21}],32:[function(require,module,exports){
 "use strict";
 
 // these are each responsible for responding to a 'trigger'
@@ -9519,6 +9525,31 @@ module.exports = {
 };
 
 },{}],35:[function(require,module,exports){
+"use strict";
+
+
+async function exportOutput(data) {
+
+    data.el.canvas.output.toBlob(
+        function(blob) {
+
+            const download = document.createElement("a");
+
+            download.download = "web_img_freq_export.png";
+            download.href = window.URL.createObjectURL(blob);
+            download.click();
+
+        }
+    );
+
+}
+
+
+module.exports = {
+    exportOutput: exportOutput,
+};
+
+},{}],36:[function(require,module,exports){
 "use strict";
 
 const SCI = {
