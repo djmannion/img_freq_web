@@ -33,6 +33,7 @@ A demonstration version is available on [this website](https://www.djmannion.net
 * Untested on Safari and Edge.
 * Webcam doesn't seem to work on mobile devices (can upload from camera, though).
 * Boundaries on the window and filter are hard rather than ramped.
+* Filter is only on spatial frequency and not on orientation.
 * Widget layout is relatively unstyled.
 * Page layout could be improved&mdash;ideally the key components would be visible without scrolling.
 * No explanatory prose.
