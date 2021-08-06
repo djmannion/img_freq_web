@@ -1,6 +1,6 @@
 # Interactive image Fourier analysis website
 
-This hosts the code and files for a website that allows for interactive exploration of image Fourier analysis&mdash;potentially be useful for teaching purposes.
+This hosts the code and files for a website that allows for interactive exploration of image Fourier analysis&mdash;potentially useful for teaching purposes.
 
 Contents:
 
@@ -14,6 +14,8 @@ Contents:
 ## Demonstration
 
 A demonstration version is available on [this website](https://www.djmannion.net/img_freq_web).
+
+https://user-images.githubusercontent.com/1371039/128455842-55893360-0714-4080-bcda-9a6eb98ad8de.mp4
 
 ## Features
 
