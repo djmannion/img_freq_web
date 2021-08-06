@@ -18,22 +18,25 @@ A demonstration version is available on [this website](https://www.djmannion.net
 ## Features
 
 * All calculations performed entirely within the browser.
-* Input images can be uploaded or grabbed from a webcam.
+* Includes example natural and synthetic images.
+* Custom images can be uploaded or grabbed from a webcam.
 * Windowing can be applied to the input image.
 * Amplitude spectrum displayed on either log-polar or (zoomable) cartesian axes.
 * Optionally shows the spatial frequency slope.
 * Can set low-pass, high-pass, or band-pass filters and see the reconstructed output.
+* Output can be saved to the local computer.
 
 ## Current limitations
 
-* Doesn't work reliably on mobile devices (not sure why!).
 * Untested on Safari and Edge.
+* Webcam doesn't seem to work on mobile devices (can upload from camera, though).
 * Boundaries on the window and filter are hard rather than ramped.
 * Widget layout is relatively unstyled.
 * Page layout could be improved&mdash;ideally the key components would be visible without scrolling.
 * No explanatory prose.
 * Needs some visual indicator when updating the output.
 * Missing axis labels on the non-image canvases.
+* Some more example images could be added.
 
 ## Hosting
 

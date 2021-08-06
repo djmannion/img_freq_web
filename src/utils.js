@@ -77,11 +77,15 @@ const setSRGBToLinearRGB = SCI.cwise(
 const setIntervalND = SCI.cwise(
     {
         args: ["array", "scalar", "scalar", "scalar", "scalar"],
+        pre: function(o, oldMin, oldMax, newMin, newMax) {
+            this.oldRange = oldMax - oldMin;
+            this.newRange = newMax - newMin;
+        },
         body: function(o, oldMin, oldMax, newMin, newMax) {
             o = (
                 (
-                    (o - oldMin) * (newMax - newMin)
-                ) / (oldMax - oldMin)
+                    (o - oldMin) * this.newRange
+                ) / this.oldRange
             ) + newMin;
         },
     },

@@ -5,6 +5,7 @@ const SCI = {
     scratch: require("ndarray-scratch"),
     zeros: require("zeros"),
     fft: require("ndarray-fft"),
+    ops: require("ndarray-ops"),
     cops: require("ndarray-complex"),
     toPolar: require("ndarray-log-polar"),
 };
@@ -78,8 +79,24 @@ function setFFTOutput(data) {
 
     if (data.el.specAxes.value === "Log-polar" && data.el.sfPlotActive.checked) {
 
-        const logND = SCI.ndarray(data.fSFAmpArray.map(Math.log));
-        UTILS.setNormaliseND(logND, {newMax: data.ampMeanMax});
+        const logND = SCI.ndarray(
+            data.fSFAmpArray.map(
+                function(x) {
+                    return Math.log(x + Number.EPSILON);
+                }
+            ),
+        );
+
+        let min;
+
+        if (SCI.ops.inf(logND) === Math.log(Number.EPSILON)) {
+            min = 1.5;
+        }
+        else {
+            min = SCI.ops.inf(logND);
+        }
+
+        UTILS.setNormaliseND(logND, {oldMin: min, newMax: data.ampMeanMax});
 
         data.el.context.amp.beginPath();
 

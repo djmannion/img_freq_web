@@ -8837,6 +8837,7 @@ const SCI = {
     scratch: require("ndarray-scratch"),
     zeros: require("zeros"),
     fft: require("ndarray-fft"),
+    ops: require("ndarray-ops"),
     cops: require("ndarray-complex"),
     toPolar: require("ndarray-log-polar"),
 };
@@ -8910,8 +8911,24 @@ function setFFTOutput(data) {
 
     if (data.el.specAxes.value === "Log-polar" && data.el.sfPlotActive.checked) {
 
-        const logND = SCI.ndarray(data.fSFAmpArray.map(Math.log));
-        UTILS.setNormaliseND(logND, {newMax: data.ampMeanMax});
+        const logND = SCI.ndarray(
+            data.fSFAmpArray.map(
+                function(x) {
+                    return Math.log(x + Number.EPSILON);
+                }
+            ),
+        );
+
+        let min;
+
+        if (SCI.ops.inf(logND) === Math.log(Number.EPSILON)) {
+            min = 1.5;
+        }
+        else {
+            min = SCI.ops.inf(logND);
+        }
+
+        UTILS.setNormaliseND(logND, {oldMin: min, newMax: data.ampMeanMax});
 
         data.el.context.amp.beginPath();
 
@@ -8934,7 +8951,7 @@ function setFFTOutput(data) {
 
 module.exports = handleTrigger;
 
-},{"./triggers":33,"./utils":36,"ndarray":23,"ndarray-complex":15,"ndarray-fft":16,"ndarray-log-polar":19,"ndarray-scratch":21,"zeros":26}],29:[function(require,module,exports){
+},{"./triggers":33,"./utils":36,"ndarray":23,"ndarray-complex":15,"ndarray-fft":16,"ndarray-log-polar":19,"ndarray-ops":20,"ndarray-scratch":21,"zeros":26}],29:[function(require,module,exports){
 "use strict";
 
 const SCI = {
@@ -8988,6 +9005,12 @@ async function setImageSource(data) {
             Dog: "dog.jpg",
             Landscape: "landscape.jpg",
             Beach: "ocean.jpg",
+            "Sinusoidal grating (0°, low SF)": "grating_h_lf.png",
+            "Sinusoidal grating (90°, low SF)": "grating_v_lf.png",
+            "Sinusoidal grating (45°, low SF)": "grating_o_lf.png",
+            "Sinusoidal grating (0°, mid SF)": "grating_h_mf.png",
+            "Sinusoidal grating (0°, high SF)": "grating_h_hf.png",
+            Plaid: "plaid.png",
         };
 
         const imagePath = `img/${sourceFilenames[imageSource]}`;
@@ -9436,7 +9459,7 @@ async function handleWebcam(data) {
     try {
         await data.el.video.play();
     }
-    catch(err) {
+    catch (err) {
         console.log(err);
         return;
     }
@@ -9629,11 +9652,15 @@ const setSRGBToLinearRGB = SCI.cwise(
 const setIntervalND = SCI.cwise(
     {
         args: ["array", "scalar", "scalar", "scalar", "scalar"],
+        pre: function(o, oldMin, oldMax, newMin, newMax) {
+            this.oldRange = oldMax - oldMin;
+            this.newRange = newMax - newMin;
+        },
         body: function(o, oldMin, oldMax, newMin, newMax) {
             o = (
                 (
-                    (o - oldMin) * (newMax - newMin)
-                ) / (oldMax - oldMin)
+                    (o - oldMin) * this.newRange
+                ) / this.oldRange
             ) + newMin;
         },
     },

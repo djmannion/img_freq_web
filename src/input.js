@@ -51,6 +51,12 @@ async function setImageSource(data) {
             Dog: "dog.jpg",
             Landscape: "landscape.jpg",
             Beach: "ocean.jpg",
+            "Sinusoidal grating (0°, low SF)": "grating_h_lf.png",
+            "Sinusoidal grating (90°, low SF)": "grating_v_lf.png",
+            "Sinusoidal grating (45°, low SF)": "grating_o_lf.png",
+            "Sinusoidal grating (0°, mid SF)": "grating_h_mf.png",
+            "Sinusoidal grating (0°, high SF)": "grating_h_hf.png",
+            Plaid: "plaid.png",
         };
 
         const imagePath = `img/${sourceFilenames[imageSource]}`;
