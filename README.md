@@ -36,6 +36,7 @@ https://user-images.githubusercontent.com/1371039/128455842-55893360-0714-4080-b
 
 * Untested on Safari and Edge.
 * Webcam doesn't seem to work on mobile devices (can upload from camera, though).
+* Layout problems on mobile devices.
 * Boundaries on the window and filter are hard rather than ramped.
 * Filter is only on spatial frequency and not on orientation.
 * Widget layout is relatively unstyled.
