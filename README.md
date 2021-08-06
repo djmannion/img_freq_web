@@ -2,6 +2,8 @@
 
 This hosts the code and files for a website that allows for interactive exploration of image Fourier analysis.
 
+This website could potentially be useful for teaching purposes.
+
 Contents:
 
 * [Demonstration](https://github.com/djmannion/img_freq_web#demonstration)
