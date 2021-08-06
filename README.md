@@ -13,7 +13,11 @@ Contents:
 
 ## Demonstration
 
+### Website
+
 A demonstration version is available on [this website](https://www.djmannion.net/img_freq_web).
+
+### Video
 
 https://user-images.githubusercontent.com/1371039/128455842-55893360-0714-4080-bcda-9a6eb98ad8de.mp4
 
