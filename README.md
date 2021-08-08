@@ -2,6 +2,8 @@
 
 This hosts the code and files for a website that allows for interactive exploration of image Fourier analysis&mdash;potentially useful for teaching.
 
+See [this blog post](https://www.djmannion.net/img_freq_web_post/) for more background.
+
 Contents:
 
 * [Demonstration](https://github.com/djmannion/img_freq_web#demonstration)
@@ -27,7 +29,7 @@ https://user-images.githubusercontent.com/1371039/128455842-55893360-0714-4080-b
 * Includes example natural and synthetic images.
 * Custom images can be uploaded or grabbed from a webcam.
 * Windowing can be applied to the input image.
-* Amplitude spectrum displayed on either log-polar or (zoomable) cartesian axes.
+* Amplitude spectrum displayed on either log-polar or (zoomable) Cartesian axes.
 * Optionally shows the spatial frequency slope.
 * Can set low-pass, high-pass, or band-pass filters and see the reconstructed output.
 * Output can be saved to the local computer.
@@ -52,7 +54,7 @@ Copy the files in the `site` directory to a web server.
 
 ## Building
 
-If you would like to make any changes or fixes, the javascript will need to be re-compiled using [`node.js`](https://nodejs.org/).
+If you would like to make any changes or fixes, the JavaScript will need to be re-compiled using [`node.js`](https://nodejs.org/).
 This is because the site uses functionality from the great set of [`scijs`](https://github.com/scijs) packages.
 
 ### Install the necessary packages
