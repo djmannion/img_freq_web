@@ -67,3 +67,10 @@ canvas {
         grid-row-start: auto;
     }
 }
+
+/* hide webcam button on touch devices */
+@media (hover: none) {
+    #webcamButton {
+        display: none;
+    }
+}
