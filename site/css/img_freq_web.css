@@ -50,3 +50,27 @@ canvas {
 #filePicker {
     display: none;
 }
+
+@media all and (max-width: 1024px) {
+    select {
+        width: 100%; /* prevent options from stretching col */
+    }
+}
+
+@media all and (max-width: 600px) {
+    #pageGrid {
+        grid-template-columns: auto;
+    }
+    
+    #pageGrid > * {
+        grid-column-start: auto;
+        grid-row-start: auto;
+    }
+}
+
+/* hide webcam button on touch devices */
+@media (hover: none) {
+    #webcamButton {
+        display: none;
+    }
+}
