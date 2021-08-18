@@ -8781,11 +8781,12 @@ function setFilter(data) {
     data.filterLow = Math.pow(filterLowRaw / 100, exponent);
     data.filterHigh = Math.pow(filterHighRaw / 100, exponent) * 1.5;
 
-    UTILS.setApertureND(
+    UTILS.setFilterND(
         data.filterShiftedND, // output
         data.distND, // distance
         data.filterLow, // inner
         data.filterHigh, // outer
+        data.filterDegree,
     );
 
     data.filterND = UTILS.calcFFTShift(data.filterShiftedND);
@@ -9213,8 +9214,10 @@ function initialiseData() {
     data.distND = SCI.zeros(data.imgDim);
     UTILS.setDistanceND(data.distND);
 
+    data.filterDegree = 20;
+
     data.apertureND = SCI.zeros(data.imgDim);
-    UTILS.setApertureND(data.apertureND, data.distND, 0, 0.95);
+    UTILS.setFilterND(data.apertureND, data.distND, 0, 0.85, data.filterDegree);
 
     // holds the real, imaginary, and abs data from the FFT
     // the 'shifted' version means that `fftshift` has been applied to it
@@ -9601,14 +9604,31 @@ const setDistanceND = SCI.cwise(
 );
 
 
-const setApertureND = SCI.cwise(
+// output, distance, inner cutoff, outer cutoff, degree
+const setFilterND = SCI.cwise(
     {
-        args: ["array", "array", "scalar", "scalar"],
-        body: function(output, dist, inner, outer) {
-            output = (dist >= inner && dist < outer) ? 1 : 0;
+        args: ["array", "array", "scalar", "scalar", "scalar"],
+        body: function(output, dist, inner, outer, degree) {
+
+            let cutoffs = [inner, outer];
+
+            let filts = cutoffs.map(
+                function(cutoff) {
+                    if (cutoff === 0) {
+                        return 0;
+                    }
+                    else {
+                        return 1 / (1 + Math.pow(dist / cutoff, 2 * degree));
+                    };
+                }
+            );
+
+            output = filts[1] - filts[0];
+
         },
     },
 );
+
 
 const setLinearRGBToLuminance = SCI.cwise(
     {
@@ -9864,7 +9884,7 @@ const calcColumnMean = SCI.cwise(
 
 module.exports = {
     setDistanceND: setDistanceND,
-    setApertureND: setApertureND,
+    setFilterND: setFilterND,
     setLinearRGBToLuminance: setLinearRGBToLuminance,
     setLinearRGBToSRGB: setLinearRGBToSRGB,
     setSRGBToLinearRGB: setSRGBToLinearRGB,

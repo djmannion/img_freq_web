@@ -26,14 +26,31 @@ const setDistanceND = SCI.cwise(
 );
 
 
-const setApertureND = SCI.cwise(
+// output, distance, inner cutoff, outer cutoff, degree
+const setFilterND = SCI.cwise(
     {
-        args: ["array", "array", "scalar", "scalar"],
-        body: function(output, dist, inner, outer) {
-            output = (dist >= inner && dist < outer) ? 1 : 0;
+        args: ["array", "array", "scalar", "scalar", "scalar"],
+        body: function(output, dist, inner, outer, degree) {
+
+            const cutoffs = [inner, outer];
+
+            const filts = cutoffs.map(
+                function(cutoff) {
+                    if (cutoff === 0) {
+                        return 0;
+                    }
+                    else {
+                        return 1 / (1 + Math.pow(dist / cutoff, 2 * degree));
+                    };
+                }
+            );
+
+            output = filts[1] - filts[0];
+
         },
     },
 );
+
 
 const setLinearRGBToLuminance = SCI.cwise(
     {
@@ -289,7 +306,7 @@ const calcColumnMean = SCI.cwise(
 
 module.exports = {
     setDistanceND: setDistanceND,
-    setApertureND: setApertureND,
+    setFilterND: setFilterND,
     setLinearRGBToLuminance: setLinearRGBToLuminance,
     setLinearRGBToSRGB: setLinearRGBToSRGB,
     setSRGBToLinearRGB: setSRGBToLinearRGB,

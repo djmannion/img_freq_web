@@ -34,11 +34,12 @@ function setFilter(data) {
     data.filterLow = Math.pow(filterLowRaw / 100, exponent);
     data.filterHigh = Math.pow(filterHighRaw / 100, exponent) * 1.5;
 
-    UTILS.setApertureND(
+    UTILS.setFilterND(
         data.filterShiftedND, // output
         data.distND, // distance
         data.filterLow, // inner
         data.filterHigh, // outer
+        data.filterDegree,
     );
 
     data.filterND = UTILS.calcFFTShift(data.filterShiftedND);
