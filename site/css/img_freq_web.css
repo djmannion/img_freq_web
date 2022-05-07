@@ -6,8 +6,6 @@ body {
     line-height: 150%;
     width: 100%;
     max-width: 1200px;
-    border: solid;
-    border-width: 1px;
     box-sizing: border-box;
 }
 
@@ -15,6 +13,8 @@ body {
     display: grid;
     grid-template-columns: 1fr 1fr;
     grid-auto-rows: min-content;  /* allow the rows to have different heights */
+    border: solid;
+    border-width: 1px;
 }
 
 /* switch the horizontal positions of the filter and output panels */
@@ -73,4 +73,17 @@ canvas {
     #webcamButton {
         display: none;
     }
+}
+
+footer {
+    text-align: center;
+    margin: 1.5rem;
+}
+
+hr {
+    height: 1px;
+    border: 0;
+    background-color: grey;
+    margin-top: 1.5em;
+    margin-bottom: 1.5em;
 }
