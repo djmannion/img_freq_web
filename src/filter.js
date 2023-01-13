@@ -34,12 +34,21 @@ function setFilter(data) {
     data.filterLow = Math.pow(filterLowRaw / 100, exponent);
     data.filterHigh = Math.pow(filterHighRaw / 100, exponent) * 1.5;
 
+    const oriCentreDeg = data.el.oriCentre.valueAsNumber;
+    const oriWidthDeg = data.el.oriWidth.valueAsNumber;
+
+    const oriCentre = oriCentreDeg * Math.PI / 180;
+    const oriWidth = oriWidthDeg * Math.PI / 180;
+
     UTILS.setFilterND(
         data.filterShiftedND, // output
         data.distND, // distance
+        data.angleND, // angle
         data.filterLow, // inner
         data.filterHigh, // outer
         data.filterDegree,
+        oriCentre,
+        oriWidth,
     );
 
     data.filterND = UTILS.calcFFTShift(data.filterShiftedND);

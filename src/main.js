@@ -65,6 +65,8 @@ function initialiseData() {
     data.el.applyWindow = document.getElementById("windowingActive");
     data.el.lowPassCutoff = document.getElementById("lowPassCutoff");
     data.el.highPassCutoff = document.getElementById("highPassCutoff");
+    data.el.oriCentre = document.getElementById("oriCentre");
+    data.el.oriWidth = document.getElementById("oriWidth");
     data.el.filePicker = document.getElementById("filePicker");
     data.el.fileButton = document.getElementById("fileButton");
     data.el.webcamButton = document.getElementById("webcamButton");
@@ -84,10 +86,14 @@ function initialiseData() {
     data.distND = SCI.zeros(data.imgDim);
     UTILS.setDistanceND(data.distND);
 
+    // holds the angle, in radians
+    data.angleND = SCI.zeros(data.imgDim);
+    UTILS.setAngleND(data.angleND);
+
     data.filterDegree = 20;
 
     data.apertureND = SCI.zeros(data.imgDim);
-    UTILS.setFilterND(data.apertureND, data.distND, 0, 0.85, data.filterDegree);
+    UTILS.setFilterND(data.apertureND, data.distND, data.angleND, 0, 0.85, data.filterDegree, 0, 180);
 
     // holds the real, imaginary, and abs data from the FFT
     // the 'shifted' version means that `fftshift` has been applied to it
@@ -162,6 +168,12 @@ function addHandlers({data} = {}) {
         );
     }
 
+    for (const el of [data.el.oriCentre, data.el.oriWidth]) {
+        el.addEventListener(
+            "input",
+            () => PIPELINE.run({data: data, trigger: TRIGGERS.filtChange})
+        );
+    }
 
     function filterEndFromEvent(evt) {
         return evt.target.id.slice(0, evt.target.id.indexOf("Pass"));

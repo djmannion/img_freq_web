@@ -25,12 +25,27 @@ const setDistanceND = SCI.cwise(
     },
 );
 
+const setAngleND = SCI.cwise(
+    {
+        args: ["array", "shape", "index"],
+        pre: function(output, imgShape) {
+            this.halfSize = imgShape[0] / 2;
+        },
+        body: function(output, imgShape, index) {
+            const iRow = index[0];
+            const iCol = index[1];
+            const x = iCol - this.halfSize;
+            const y = iRow - this.halfSize;
+            output = Math.atan2(y, x);
+        },
+    },
+);
 
-// output, distance, inner cutoff, outer cutoff, degree
+// output, distance, angle, inner cutoff, outer cutoff, degree, ori centre, ori width
 const setFilterND = SCI.cwise(
     {
-        args: ["array", "array", "scalar", "scalar", "scalar"],
-        body: function(output, dist, inner, outer, degree) {
+        args: ["array", "array", "array", "scalar", "scalar", "scalar", "scalar", "scalar"],
+        body: function(output, dist, angle, inner, outer, degree, oriCentre, oriWidth) {
 
             const cutoffs = [inner, outer];
 
@@ -306,6 +321,7 @@ const calcColumnMean = SCI.cwise(
 
 module.exports = {
     setDistanceND: setDistanceND,
+    setAngleND: setAngleND,
     setFilterND: setFilterND,
     setLinearRGBToLuminance: setLinearRGBToLuminance,
     setLinearRGBToSRGB: setLinearRGBToSRGB,
