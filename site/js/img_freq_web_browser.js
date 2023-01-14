@@ -9607,22 +9607,6 @@ const SCI = {
 };
 
 
-// circular distance between an array and a scalar
-// both are assumed to be in radians
-/*
-const circDistNDs = SCI.cwise(
-    {
-        args: ["array", "scalar"],
-        pre: function (thetaND, theta) {
-            this.aTheta = ops.
-        },
-        body: function (thetaND, theta) {
-            output = 1;
-        },
-    },
-);
-*/
-
 const setDistanceND = SCI.cwise(
     {
         args: ["array", "shape", "index"],
