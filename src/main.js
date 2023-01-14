@@ -173,6 +173,10 @@ function addHandlers({data} = {}) {
             "input",
             () => PIPELINE.run({data: data, trigger: TRIGGERS.filtChange})
         );
+        el.addEventListener(
+            "change",
+            () => PIPELINE.run({data: data, trigger: TRIGGERS.filtSet})
+        );
     }
 
     function filterEndFromEvent(evt) {

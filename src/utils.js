@@ -63,19 +63,31 @@ const setFilterND = SCI.cwise(
             const sfFilt = filts[1] - filts[0];
 
             // now for the ori
-            const oriDist = Math.min(
-                angle - oriCentre,
-                Math.PI * 2 + oriCentre - angle,
-            );
+            let oriDists = [];
+            let offsets = [0, Math.PI];
+            for (let i=0; i < 2; i++) { //offset of [0, Math.PI]) {
+                let offset = offsets[i];
+                let currOriCentre = -(oriCentre + offset);
+                let angles;
+                if (angle <= currOriCentre) {
+                    angles = [angle, currOriCentre];
+                }
+                else {
+                    angles = [currOriCentre, angle];
+                }
+                let oriDist = Math.min(
+                    angles[1] - angles[0],
+                    Math.PI * 2 + angles[0] - angles[1]
+                );
+                let oriFilt = 1 / (1 + Math.pow(oriDist / (oriWidth / 2), 2 * degree));
+                oriDists.push(oriFilt);
+            }
 
-            //const oriDist = Math.abs(
-            //   Math.atan2(Math.sin(oriCentre), Math.cos(oriCentre)) +
-            //    Math.atan2(Math.sin(angle), Math.cos(angle))
-            //);
+            const ori = oriDists[0] + oriDists[1];
 
-            //const oriFilt = oriDist <= (oriWidth / 2) ? 1 : 0;
+            const filt = (sfFilt * ori);
 
-            output = 1; // oriFilt;
+            output = filt;
 
         },
     },

@@ -3,6 +3,7 @@
 const SCI = {
     toPolar: require("ndarray-log-polar"),
     scratch: require("ndarray-scratch"),
+    ops: require("ndarray-ops"),
 };
 
 const TRIGGERS = require("./triggers");
