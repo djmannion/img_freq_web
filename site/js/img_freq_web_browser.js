@@ -9607,6 +9607,22 @@ const SCI = {
 };
 
 
+// circular distance between an array and a scalar
+// both are assumed to be in radians
+/*
+const circDistNDs = SCI.cwise(
+    {
+        args: ["array", "scalar"],
+        pre: function (thetaND, theta) {
+            this.aTheta = ops.
+        },
+        body: function (thetaND, theta) {
+            output = 1;
+        },
+    },
+);
+*/
+
 const setDistanceND = SCI.cwise(
     {
         args: ["array", "shape", "index"],
@@ -9659,7 +9675,22 @@ const setFilterND = SCI.cwise(
                 }
             );
 
-            output = filts[1] - filts[0];
+            const sfFilt = filts[1] - filts[0];
+
+            // now for the ori
+            const oriDist = Math.min(
+                angle - oriCentre,
+                Math.PI * 2 + oriCentre - angle,
+            );
+
+            //const oriDist = Math.abs(
+            //   Math.atan2(Math.sin(oriCentre), Math.cos(oriCentre)) +
+            //    Math.atan2(Math.sin(angle), Math.cos(angle))
+            //);
+
+            //const oriFilt = oriDist <= (oriWidth / 2) ? 1 : 0;
+
+            output = 1; // oriFilt;
 
         },
     },
