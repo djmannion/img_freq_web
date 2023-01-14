@@ -8750,7 +8750,6 @@ module.exports = function zeros(shape, dtype) {
 const SCI = {
     toPolar: require("ndarray-log-polar"),
     scratch: require("ndarray-scratch"),
-    ops: require("ndarray-ops"),
 };
 
 const TRIGGERS = require("./triggers");
@@ -8840,7 +8839,7 @@ function setFilterOutput(data) {
 
 module.exports = handleTrigger;
 
-},{"./triggers":33,"./utils":36,"ndarray-log-polar":19,"ndarray-ops":20,"ndarray-scratch":21}],28:[function(require,module,exports){
+},{"./triggers":33,"./utils":36,"ndarray-log-polar":19,"ndarray-scratch":21}],28:[function(require,module,exports){
 "use strict";
 
 const SCI = {
@@ -9233,7 +9232,7 @@ function initialiseData() {
     data.filterDegree = 20;
 
     data.apertureND = SCI.zeros(data.imgDim);
-    UTILS.setFilterND(data.apertureND, data.distND, data.angleND, 0, 0.85, data.filterDegree, 0, 180);
+    UTILS.setFilterND(data.apertureND, data.distND, data.angleND, 0, 0.85, data.filterDegree, 0, Math.PI);
 
     // holds the real, imaginary, and abs data from the FFT
     // the 'shifted' version means that `fftshift` has been applied to it
@@ -9667,31 +9666,39 @@ const setFilterND = SCI.cwise(
             const sfFilt = filts[1] - filts[0];
 
             // now for the ori
-            let oriDists = [];
-            let offsets = [0, Math.PI];
-            for (let i=0; i < 2; i++) { //offset of [0, Math.PI]) {
-                let offset = offsets[i];
-                let currOriCentre = -(oriCentre + offset);
-                let angles;
-                if (angle <= currOriCentre) {
-                    angles = [angle, currOriCentre];
-                }
-                else {
-                    angles = [currOriCentre, angle];
-                }
-                let oriDist = Math.min(
+            const oriFilts = new Array(2);
+            const offsets = [0, Math.PI];
+
+            for (let iOffset = 0; iOffset < offsets.length; iOffset++) {
+
+                const offset = offsets[iOffset];
+
+                const currOriCentre = -(oriCentre + offset);
+
+                const angles = (
+                    (angle <= currOriCentre)
+                        ? [angle, currOriCentre]
+                        : [currOriCentre, angle]
+                );
+
+                const oriDist = Math.min(
                     angles[1] - angles[0],
                     Math.PI * 2 + angles[0] - angles[1]
                 );
-                let oriFilt = 1 / (1 + Math.pow(oriDist / (oriWidth / 2), 2 * degree));
-                oriDists.push(oriFilt);
+
+                const oriFilt = (
+                    1 /
+                    (1 + Math.pow(oriDist / (oriWidth / 2), 2 * degree))
+                );
+
+                oriFilts[iOffset] = oriFilt;
             }
 
-            const ori = oriDists[0] + oriDists[1];
+            const oriFilt = oriFilts[0] + oriFilts[1];
 
-            const filt = (sfFilt * ori);
+            const filt = (sfFilt * oriFilt);
 
-            output = filt;
+            output = Math.min(filt, 1);
 
         },
     },

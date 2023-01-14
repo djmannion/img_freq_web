@@ -93,7 +93,7 @@ function initialiseData() {
     data.filterDegree = 20;
 
     data.apertureND = SCI.zeros(data.imgDim);
-    UTILS.setFilterND(data.apertureND, data.distND, data.angleND, 0, 0.85, data.filterDegree, 0, 180);
+    UTILS.setFilterND(data.apertureND, data.distND, data.angleND, 0, 0.85, data.filterDegree, 0, Math.PI);
 
     // holds the real, imaginary, and abs data from the FFT
     // the 'shifted' version means that `fftshift` has been applied to it
