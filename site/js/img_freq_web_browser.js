@@ -8781,12 +8781,21 @@ function setFilter(data) {
     data.filterLow = Math.pow(filterLowRaw / 100, exponent);
     data.filterHigh = Math.pow(filterHighRaw / 100, exponent) * 1.5;
 
+    const oriCentreDeg = data.el.oriCentre.valueAsNumber;
+    const oriWidthDeg = data.el.oriWidth.valueAsNumber;
+
+    const oriCentre = oriCentreDeg * Math.PI / 180;
+    const oriWidth = oriWidthDeg * Math.PI / 180;
+
     UTILS.setFilterND(
         data.filterShiftedND, // output
         data.distND, // distance
+        data.angleND, // angle
         data.filterLow, // inner
         data.filterHigh, // outer
         data.filterDegree,
+        oriCentre,
+        oriWidth,
     );
 
     data.filterND = UTILS.calcFFTShift(data.filterShiftedND);
@@ -9195,6 +9204,8 @@ function initialiseData() {
     data.el.applyWindow = document.getElementById("windowingActive");
     data.el.lowPassCutoff = document.getElementById("lowPassCutoff");
     data.el.highPassCutoff = document.getElementById("highPassCutoff");
+    data.el.oriCentre = document.getElementById("oriCentre");
+    data.el.oriWidth = document.getElementById("oriWidth");
     data.el.filePicker = document.getElementById("filePicker");
     data.el.fileButton = document.getElementById("fileButton");
     data.el.webcamButton = document.getElementById("webcamButton");
@@ -9214,10 +9225,14 @@ function initialiseData() {
     data.distND = SCI.zeros(data.imgDim);
     UTILS.setDistanceND(data.distND);
 
+    // holds the angle, in radians
+    data.angleND = SCI.zeros(data.imgDim);
+    UTILS.setAngleND(data.angleND);
+
     data.filterDegree = 20;
 
     data.apertureND = SCI.zeros(data.imgDim);
-    UTILS.setFilterND(data.apertureND, data.distND, 0, 0.85, data.filterDegree);
+    UTILS.setFilterND(data.apertureND, data.distND, data.angleND, 0, 0.85, data.filterDegree, 0, Math.PI);
 
     // holds the real, imaginary, and abs data from the FFT
     // the 'shifted' version means that `fftshift` has been applied to it
@@ -9292,6 +9307,16 @@ function addHandlers({data} = {}) {
         );
     }
 
+    for (const el of [data.el.oriCentre, data.el.oriWidth]) {
+        el.addEventListener(
+            "input",
+            () => PIPELINE.run({data: data, trigger: TRIGGERS.filtChange})
+        );
+        el.addEventListener(
+            "change",
+            () => PIPELINE.run({data: data, trigger: TRIGGERS.filtSet})
+        );
+    }
 
     function filterEndFromEvent(evt) {
         return evt.target.id.slice(0, evt.target.id.indexOf("Pass"));
@@ -9603,16 +9628,31 @@ const setDistanceND = SCI.cwise(
     },
 );
 
+const setAngleND = SCI.cwise(
+    {
+        args: ["array", "shape", "index"],
+        pre: function(output, imgShape) {
+            this.halfSize = imgShape[0] / 2;
+        },
+        body: function(output, imgShape, index) {
+            const iRow = index[0];
+            const iCol = index[1];
+            const x = iCol - this.halfSize;
+            const y = iRow - this.halfSize;
+            output = Math.atan2(y, x);
+        },
+    },
+);
 
-// output, distance, inner cutoff, outer cutoff, degree
+// output, distance, angle, inner cutoff, outer cutoff, degree, ori centre, ori width
 const setFilterND = SCI.cwise(
     {
-        args: ["array", "array", "scalar", "scalar", "scalar"],
-        body: function(output, dist, inner, outer, degree) {
+        args: ["array", "array", "array", "scalar", "scalar", "scalar", "scalar", "scalar"],
+        body: function(output, dist, angle, inner, outer, degree, oriCentre, oriWidth) {
 
-            let cutoffs = [inner, outer];
+            const cutoffs = [inner, outer];
 
-            let filts = cutoffs.map(
+            const filts = cutoffs.map(
                 function(cutoff) {
                     if (cutoff === 0) {
                         return 0;
@@ -9623,7 +9663,42 @@ const setFilterND = SCI.cwise(
                 }
             );
 
-            output = filts[1] - filts[0];
+            const sfFilt = filts[1] - filts[0];
+
+            // now for the ori
+            const oriFilts = new Array(2);
+            const offsets = [0, Math.PI];
+
+            for (let iOffset = 0; iOffset < offsets.length; iOffset++) {
+
+                const offset = offsets[iOffset];
+
+                const currOriCentre = -(oriCentre + offset);
+
+                const angles = (
+                    (angle <= currOriCentre)
+                        ? [angle, currOriCentre]
+                        : [currOriCentre, angle]
+                );
+
+                const oriDist = Math.min(
+                    angles[1] - angles[0],
+                    Math.PI * 2 + angles[0] - angles[1]
+                );
+
+                const oriFilt = (
+                    1 /
+                    (1 + Math.pow(oriDist / (oriWidth / 2), 2 * degree))
+                );
+
+                oriFilts[iOffset] = oriFilt;
+            }
+
+            const oriFilt = oriFilts[0] + oriFilts[1];
+
+            const filt = (sfFilt * oriFilt);
+
+            output = Math.min(filt, 1);
 
         },
     },
@@ -9884,6 +9959,7 @@ const calcColumnMean = SCI.cwise(
 
 module.exports = {
     setDistanceND: setDistanceND,
+    setAngleND: setAngleND,
     setFilterND: setFilterND,
     setLinearRGBToLuminance: setLinearRGBToLuminance,
     setLinearRGBToSRGB: setLinearRGBToSRGB,

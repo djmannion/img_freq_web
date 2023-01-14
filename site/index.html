@@ -84,15 +84,15 @@
                                 <legend>Depiction</legend>
 
                                 <select name="specAxes" id="specAxes">
-                                    <option selected>Log-polar</option>
-                                    <option>Cartesian</option>
+                                    <option>Log-polar</option>
+                                    <option selected>Cartesian</option>
                                 </select>
                             </fieldset>
 
                             <fieldset>
                                 <legend>Zoom</legend>
 
-                                <select name="specZoom" id="specZoom" disabled>
+                                <select name="specZoom" id="specZoom">
                                     <option>1x</option>
                                     <option selected>2x</option>
                                     <option>4x</option>
@@ -102,7 +102,7 @@
                             <fieldset>
                                 <legend>Plot</legend>
 
-                                <input type="checkbox" id="sfPlotActive" name="sfPlotActive" checked>
+                                <input type="checkbox" id="sfPlotActive" name="sfPlotActive" checked disabled>
                                 <label for="sfPlotActive">Plot log(amp) for spatial frequency</label>
 
                             </fieldset>
@@ -123,18 +123,24 @@
                         <form>
 
                             <fieldset>
-                                <legend>Low cutoff</legend>
-
+                                <legend>Spatial frequency low cutoff</legend>
                                 <input type="range" id="lowPassCutoff" min="0" max="100" step="1" value="0">
-                                <!--<label for="lowPassCutoff">Cutoff</label>-->
                             </fieldset>
 
                             <fieldset>
-                                <legend>High cutoff</legend>
-
+                                <legend>Spatial frequency high cutoff</legend>
                                 <input type="range" id="highPassCutoff" min="0" max="100" step="1" value="50">
-                                <!--<label for="highPassCutoff">Cutoff</label>-->
                             </fieldset>
+
+                            <fieldset>
+                                <legend>Orientation centre</legend>
+                                <input type="range" id="oriCentre" min="0" max="180" step="1" value="0">
+                            </fieldset>
+                            <fieldset>
+                                <legend>Orientation width</legend>
+                                <input type="range" id="oriWidth" min="1" max="180" step="1" value="90">
+                            </fieldset>
+
                         </form>
                     </div>
                 </div>
@@ -164,6 +170,10 @@
         </div>
 
         <footer role="contentinfo">
+
+            <p>
+            <a href="https://github.com/djmannion/img_freq_web">Source code</a>
+            </p>
 
             <address>
                 <a href="https://www.djmannion.net">Homepage</a>

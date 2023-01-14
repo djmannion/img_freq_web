@@ -25,12 +25,27 @@ const setDistanceND = SCI.cwise(
     },
 );
 
+const setAngleND = SCI.cwise(
+    {
+        args: ["array", "shape", "index"],
+        pre: function(output, imgShape) {
+            this.halfSize = imgShape[0] / 2;
+        },
+        body: function(output, imgShape, index) {
+            const iRow = index[0];
+            const iCol = index[1];
+            const x = iCol - this.halfSize;
+            const y = iRow - this.halfSize;
+            output = Math.atan2(y, x);
+        },
+    },
+);
 
-// output, distance, inner cutoff, outer cutoff, degree
+// output, distance, angle, inner cutoff, outer cutoff, degree, ori centre, ori width
 const setFilterND = SCI.cwise(
     {
-        args: ["array", "array", "scalar", "scalar", "scalar"],
-        body: function(output, dist, inner, outer, degree) {
+        args: ["array", "array", "array", "scalar", "scalar", "scalar", "scalar", "scalar"],
+        body: function(output, dist, angle, inner, outer, degree, oriCentre, oriWidth) {
 
             const cutoffs = [inner, outer];
 
@@ -45,7 +60,42 @@ const setFilterND = SCI.cwise(
                 }
             );
 
-            output = filts[1] - filts[0];
+            const sfFilt = filts[1] - filts[0];
+
+            // now for the ori
+            const oriFilts = new Array(2);
+            const offsets = [0, Math.PI];
+
+            for (let iOffset = 0; iOffset < offsets.length; iOffset++) {
+
+                const offset = offsets[iOffset];
+
+                const currOriCentre = -(oriCentre + offset);
+
+                const angles = (
+                    (angle <= currOriCentre)
+                        ? [angle, currOriCentre]
+                        : [currOriCentre, angle]
+                );
+
+                const oriDist = Math.min(
+                    angles[1] - angles[0],
+                    Math.PI * 2 + angles[0] - angles[1]
+                );
+
+                const oriFilt = (
+                    1 /
+                    (1 + Math.pow(oriDist / (oriWidth / 2), 2 * degree))
+                );
+
+                oriFilts[iOffset] = oriFilt;
+            }
+
+            const oriFilt = oriFilts[0] + oriFilts[1];
+
+            const filt = (sfFilt * oriFilt);
+
+            output = Math.min(filt, 1);
 
         },
     },
@@ -306,6 +356,7 @@ const calcColumnMean = SCI.cwise(
 
 module.exports = {
     setDistanceND: setDistanceND,
+    setAngleND: setAngleND,
     setFilterND: setFilterND,
     setLinearRGBToLuminance: setLinearRGBToLuminance,
     setLinearRGBToSRGB: setLinearRGBToSRGB,
